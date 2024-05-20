@@ -28,11 +28,6 @@ class RuntimeSettings(pydantic.BaseModel):
             ```
         """
         with open(
-            Path(
-                os.path.join(
-                    os.path.dirname(__file__),
-                    f'projects/{self.project_name}/{BENCHMARK_CONFIG_PATH}'
-                )
-            ), 'r'
+            Path.cwd() / 'projects' / self.project_name / BENCHMARK_CONFIG_PATH, 'r'
         ) as file:
             return yaml.safe_load(file)

@@ -2,7 +2,7 @@ import os
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_openai import AzureChatOpenAI
 import json
-
+from pathlib import Path
 
 def get_openai_clients() -> tuple[AzureChatOpenAI, AzureOpenAIEmbeddings]:
     azure_llm: AzureChatOpenAI = AzureChatOpenAI(
@@ -66,7 +66,7 @@ def report_success_percentage(folder_path):
     for filename in os.listdir(folder_path):
         if filename.endswith(".result"):
             total_files += 1
-            path = os.path.join(folder_path, filename)
+            path: Path = Path.cwd() / folder_path / filename
             with open(path, 'r') as file:
                 try:
                     data = json.load(file)

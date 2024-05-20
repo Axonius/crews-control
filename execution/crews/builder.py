@@ -128,9 +128,7 @@ class CrewRunner:
             rich.print(f"[green bold]Crew <{self._crew_name}> result:\n{results}\n\n[/green bold]")
 
     def _get_export_path(self) -> Path:
-        return Path(
-            os.path.join(os.path.dirname(__file__), f'../../projects/{self._project_name}/output/{self._output_file}')
-        )
+        return Path.cwd() / 'projects' / self._project_name / 'output' / self._output_file
 
     def run_crew(self) -> str:
         export_path: Path = self._get_export_path()

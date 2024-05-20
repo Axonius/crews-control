@@ -19,10 +19,10 @@ class ContextFileReader(IFileReader):
         if not context_name:
             raise ValueError('context name is required.')
 
-        path = os.path.join(os.path.dirname(__file__), f'../projects/{project_name}/{self.context_directory_path}')
-        if not Path(path).exists():
+        path = Path.cwd() / 'projects' / project_name / self.context_directory_path
+        if not path.exists():
             raise FileNotFoundError(f'Context directory not found at {path}.')
-        return (Path(os.path.join(path, context_name))).read_text()
+        return (path / context_name).read_text()
 
 
 def load_crew_contexts(

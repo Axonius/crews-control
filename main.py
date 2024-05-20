@@ -8,6 +8,7 @@ import os
 from execution.inputs import get_user_inputs, validate_user_inputs
 from execution.orchestrator import execute_crews, get_execution_config
 from models import RuntimeSettings
+from pathlib import Path
 
 def main():
     class KeyValueAction(argparse.Action):
@@ -40,9 +41,8 @@ def main():
     runtime_settings: RuntimeSettings = RuntimeSettings(project_name=args.project_name,
                                                         benchmark_mode=args.benchmark,
                                                         ignore_cache=args.ignore_cache)
-    if os.path.exists(
-        os.path.join(os.path.dirname(__file__), f'projects/{runtime_settings.project_name}')
-    ):
+    project_path: Path = Path.cwd() / 'projects' / runtime_settings.project_name
+    if project_path.exists():
         execution_config: dict = get_execution_config(project_name=runtime_settings.project_name)
     else:
         rich.print(

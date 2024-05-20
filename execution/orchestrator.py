@@ -47,29 +47,38 @@ def execute_crews(project_name: str,
         if validations and acting_crew in validations:
             from crewai import Task, Agent, Crew
             import textwrap
-            compare_to_filename = Path(
-                os.path.join(os.path.dirname(__file__),
-                             f'../projects/{project_name}/validations/{validations[acting_crew]['compare_to']}')
+            compare_to = validations[acting_crew]['compare_to']
+            compare_to_filename: Path = (
+                Path.cwd()
+                / 'projects'
+                / project_name
+                / 'validations'
+                / compare_to
             )
-            if os.path.exists(compare_to_filename):                
+            if compare_to_filename.exists():
                 with open(compare_to_filename, 'r') as file:
                     compare_to = file.read()
-                validation_results_filename = Path(
-                    os.path.join(os.path.dirname(__file__),
-                        f'../projects/{project_name}/validations/{validations[acting_crew]['compare_to']}.result')
-                    )
+
+                validation_results_filename: Path = (
+                    Path.cwd()
+                    / 'projects'
+                    / project_name
+                    / 'validations'
+                    / f'{compare_to}.result'
+                )
             else:
-                compare_to = validations[acting_crew]['compare_to']
-                validation_results_filename = Path(
-                    os.path.join(os.path.dirname(__file__),
-                        f'../projects/{project_name}/validations/{"-".
-                                                                  join(user_inputs.values()).
-                                                                  replace("*","-").
-                                                                  replace("/","-").
-                                                                  replace("\\","-").
-                                                                  replace(".","-").
-                                                                  lower()}.result')
-                    )
+                validation_results_filename: Path = Path(
+                    Path.cwd()
+                    / 'projects'
+                    / project_name
+                    / 'validations'
+                    / f'{"-".join(user_inputs.values()).
+                            replace("*","-").
+                            replace("/","-").
+                            replace("\\","-").
+                            replace(".","-").
+                            lower()}.result'
+                )
 
             metrics = validations[acting_crew]['metrics']
 
@@ -125,18 +134,15 @@ def execute_crews(project_name: str,
                 verbose = 2,
             )
             validation_result = crew.kickoff()
+            if not validation_results_filename.parent.exists():
+                validation_results_filename.parent.mkdir(parents=True)
             with open(validation_results_filename, 'w') as file:
                 file.write(validation_result)
 
 
 def get_execution_config(project_name: str) -> dict:
     with open(
-        Path(
-            os.path.join(
-                os.path.dirname(__file__),
-                f'../projects/{project_name}/{EXECUTION_CONFIG_PATH}'
-            )
-        ), 'r'
+        Path.cwd() / 'projects' / project_name / EXECUTION_CONFIG_PATH, 'r'
     ) as file:
         execution_config: dict = yaml.safe_load(file)
     return execution_config
