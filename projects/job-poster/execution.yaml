@@ -21,7 +21,7 @@ crews:
           Analyze the {company_domain} and provided description to extract insights on culture, values,
           and specific needs.
         tools:
-          - web_search
+          - website_search
           - serper
         backstory: >
           Expert in analyzing company cultures and identifying key values and needs from various sources,
@@ -32,7 +32,7 @@ crews:
           Use insights from the Research Analyst to create a detailed, engaging, and enticing job posting.
         tools:
           - serper
-          - web_search
+          - website_search
           - read_file
         backstory: >
           Skilled in crafting job descriptions that attract top talent by highlighting the company's
@@ -44,7 +44,7 @@ crews:
           values and refine it to ensure perfection.
         tools:
           - serper
-          - web_search
+          - website_search
           - read_file
         backstory: >
           A meticulous editor with an eye for detail, ensuring every piece of content is clear, engaging,
