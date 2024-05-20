@@ -121,6 +121,8 @@ class CrewRunner:
                 f'Writing {self._crew_name} result into <{export_path}>'
                 f'[/green bold]'
             )
+            if not export_path.parent.exists():
+                export_path.parent.mkdir(parents=True, exist_ok=True)
             export_path.write_text(results)
         else:
             rich.print(f"[green bold]Crew <{self._crew_name}> result:\n{results}\n\n[/green bold]")
