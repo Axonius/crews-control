@@ -56,7 +56,7 @@ class GitHubSearchTool(BaseTool):
         rate_limit = gh.get_rate_limit()
         reset_time = rate_limit.core.reset
         current_time = time.time()
-        sleep_time = reset_time - current_time + 10  # adding 10 seconds to ensure the limit is reset
+        sleep_time = reset_time.timestamp() - current_time + 10  # adding 10 seconds to ensure the limit is reset
         print(f"Rate limit exceeded. Sleeping for {sleep_time} seconds.")
         time.sleep(sleep_time)
         print("Retrying the request...")
