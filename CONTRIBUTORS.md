@@ -6,6 +6,12 @@
   - Initial project setup, documentation and main features
 - **Sharon Ohayon** ([@sharonOhayon](https://github.com/sharonOhayon))
   - Initial project code review and quality assurance
+- **Aviad Feig** ([@aviadFeig](https://github.com/aviadFeig))
+  - Initial project documentation, presentation and training materials
+- **Alexey Shchukarev** ([@AlexeyShchukarev](https://github.com/AlexeyShchukarev))
+  - Project management
+- **Michael Goberman** ([@micgob](https://github.com/micgob))
+  - Project management and team leadership
 
 ## Acknowledgements
 
