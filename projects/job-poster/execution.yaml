@@ -2,6 +2,8 @@ settings:
   output_results: true
 
 user_inputs:
+  company_name:
+    title: "Company name"
   company_description:
     title: "Company description"
   company_domain:
@@ -13,7 +15,7 @@ user_inputs:
 
 crews:
   job_posting_crew:
-    output_naming_template: '{company_domain}-job-posting.md'
+    output_naming_template: '{company_name}-job-posting.md'
     agents:
       research_agent:
         role: "Research Analyst"
