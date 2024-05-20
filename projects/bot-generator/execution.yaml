@@ -26,7 +26,7 @@ crews:
           - serper
           - youtube
           - human
-          - web_search
+          - website_search
 
     tasks:
       generate:
