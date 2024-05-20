@@ -1,0 +1,20 @@
+- The provided example in the context is for a specific bot. You need to customize it for {bot_name}.
+- Ensure that the `execution.yaml` file is according to the structure of the provided example.
+- You need to decide on how many crews (could be 1 or more), how many agents in each crew, and the tasks for each agent.
+- You need to decide on the tools required for each agent and the tasks.
+- Available tools are [serper, youtube, human, web_search, github] - you can choose any combination of these tools.
+- - serper: is used to search the internet for information.
+- - youtube: is used to search a Youtube Channels content.
+- - human: is used to engage with a human for information.
+- - web_search: is used to search in a specific website.
+- - github: is used to search in a specific github repository.
+- - The provided example was for a specific bot that had to do such research,
+- - but a {bot_name} may need to perform completely different tasks!
+- You need to decide if the bot needs to have multiple crews or just a single crew
+- If more than 1 crew is needed, you need to decide if there are dependencies between crews.
+- You can decide on the agents and their roles, goals, tools, and backstory.
+- tasks don't have tools. Tools are only assigned to agents.
+- The software engineer role in the example is just an example. You can choose any roles for any number of agents.
+- if you get inputs from the user, you can use them in descriptions, expected outputs, etc. by enclosing them in curly braces.
+- ensure that expected_output is per task and not per crew.
+- ensure that every task has an expected_output.
