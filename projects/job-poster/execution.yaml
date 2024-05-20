@@ -51,6 +51,29 @@ crews:
           and grammatically perfect.
 
     tasks:
+      industry_analysis_task:
+        agent: research_agent
+        description: >
+          Conduct an in-depth analysis of the industry related to the company's domain: "{company_domain}".
+
+          Investigate current trends, challenges, and opportunities within the industry, utilizing market
+          reports, recent developments, and expert opinions.
+
+          Assess how these factors could impact the role being hired for and the overall attractiveness of
+          the position to potential candidates.
+
+          Consider how the company's position within this industry and its response to these trends could
+          be leveraged to attract top talent.
+
+          Include in your report how the role contributes to addressing industry challenges or seizing
+          opportunities.
+        expected_output: >
+          A detailed analysis report that identifies major industry trends, challenges, and opportunities
+          relevant to the company's domain and the specific job role.
+
+          This report should provide strategic insights on positioning the job role and the company as an
+          attractive choice for potential candidates.
+
       research_company_culture_task:
         agent: research_agent
         description: >
@@ -65,6 +88,7 @@ crews:
           A comprehensive report detailing the company's culture, values, and mission, along with specific
           selling points relevant to the job role. Suggestions on incorporating these insights into the job
           posting should be included.
+
       research_role_requirements_task:
         agent: research_agent
         description: >
@@ -98,6 +122,7 @@ crews:
 
           The tone should resonate with the company's culture and values,
           aimed at attracting the right candidates.
+
       review_and_edit_job_posting_task:
         agent: review_agent
         description: >
@@ -117,25 +142,3 @@ crews:
           Feedback on potential improvements and final approval for publishing.
           
           Formated in markdown.
-      industry_analysis_task:
-        agent: research_agent
-        description: >
-          Conduct an in-depth analysis of the industry related to the company's domain: "{company_domain}".
-
-          Investigate current trends, challenges, and opportunities within the industry, utilizing market
-          reports, recent developments, and expert opinions.
-
-          Assess how these factors could impact the role being hired for and the overall attractiveness of
-          the position to potential candidates.
-
-          Consider how the company's position within this industry and its response to these trends could
-          be leveraged to attract top talent.
-
-          Include in your report how the role contributes to addressing industry challenges or seizing
-          opportunities.
-        expected_output: >
-          A detailed analysis report that identifies major industry trends, challenges, and opportunities
-          relevant to the company's domain and the specific job role.
-
-          This report should provide strategic insights on positioning the job role and the company as an
-          attractive choice for potential candidates.
