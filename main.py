@@ -9,6 +9,7 @@ from execution.inputs import get_user_inputs, validate_user_inputs
 from execution.orchestrator import execute_crews, get_execution_config
 from models import RuntimeSettings
 from pathlib import Path
+from execution.consts import EXECUTION_CONFIG_PATH
 
 def main():
     class KeyValueAction(argparse.Action):
@@ -43,7 +44,18 @@ def main():
                                                         ignore_cache=args.ignore_cache)
     project_path: Path = Path.cwd() / 'projects' / runtime_settings.project_name
     if project_path.exists():
-        execution_config: dict = get_execution_config(project_name=runtime_settings.project_name)
+        try:
+            execution_config: dict = get_execution_config(project_name=runtime_settings.project_name)
+        except FileNotFoundError:
+            rich.print(
+                Padding(
+                    f"[bold red]Error: {EXECUTION_CONFIG_PATH} file not found for project {runtime_settings.project_name}[/bold red]",
+                    (2, 4),
+                    expand=True,
+                    style="bold red",
+                )
+            )
+            os._exit(1)
     else:
         rich.print(
             Padding(
