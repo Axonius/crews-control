@@ -3,7 +3,7 @@ from github import Github, GithubException
 import os
 import time
 import ast
-
+import datetime
 
 class GitHubSearchTool(BaseTool):
     """A tool that searches for code snippets in a GitHub repository."""
@@ -52,12 +52,23 @@ class GitHubSearchTool(BaseTool):
         methods = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
         return classes, methods
 
+    def utc_to_local(self, utc_dt):
+        epoch = time.mktime(utc_dt.timetuple())
+        offset = datetime.datetime.fromtimestamp(epoch) - datetime.datetime.utcfromtimestamp(epoch)
+        return utc_dt + offset
+
     def handle_rate_limit(self, gh: Github, query: str) -> str:
-        rate_limit = gh.get_rate_limit()
-        reset_time = rate_limit.core.reset
         current_time = time.time()
-        sleep_time = reset_time.timestamp() - current_time + 10  # adding 10 seconds to ensure the limit is reset
-        print(f"Rate limit exceeded. Sleeping for {sleep_time} seconds.")
-        time.sleep(sleep_time)
+        local_reset_timestamp: datetime = time.mktime(self.utc_to_local(gh.get_rate_limit().search.reset).timetuple())
+        print(f"Time until reset: {local_reset_timestamp - current_time} seconds")
+
+        sleep_time = local_reset_timestamp - current_time + 10  # adding 10 seconds to ensure the limit is reset
+
+        if sleep_time > 0:
+            print(f"Rate limit exceeded. Sleeping for {sleep_time} seconds.")
+            time.sleep(sleep_time)
+        else:
+            print(f"Calculated negative sleep time: {sleep_time} seconds. Reset time might have already passed.")
+
         print("Retrying the request...")
         return self.execute_search(query)
