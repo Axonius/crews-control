@@ -9,7 +9,7 @@ class EnvironmentVariableNotSetError(Exception):
 
 def validate_env_vars(*vars):
     for var in vars:
-        if os.environ.get(var) is None:
+        if os.environ.get(var) is None or os.environ.get(var) == "":
             raise EnvironmentVariableNotSetError(f"Environment variable '{var}' is not set.")
 
 def get_openai_clients() -> tuple[AzureChatOpenAI, AzureOpenAIEmbeddings]:
