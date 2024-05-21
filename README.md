@@ -131,3 +131,6 @@ Documentation
 ## License
 Crews-Control is released under the [MIT License](LICENSE).
 
+## Third-Party Licenses
+
+This project uses third-party packages that are distributed under their own licenses. For a full list of these packages and their licenses, see the [LICENSES.md](LICENSES.md) file.
