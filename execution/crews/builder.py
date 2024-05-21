@@ -6,6 +6,7 @@ import time
 import rich
 from crewai import Task, Agent, Crew
 from execution.contexts import load_crew_contexts
+from execution.consts import EXIT_ON_ERROR
 from tools.index import get_tool
 
 class NoAgentFoundError(Exception):
@@ -65,11 +66,14 @@ class CrewRunner:
             raise ValueError('Crew context and user input must not have any intersection.')
 
     def _evaluate_input(self, user_input: str) -> str:
-        return user_input.format(
-            **(self._crew_context or {}),
-            **(self._user_input or {}),
-            **(self._previous_results or {})
-        )
+        try:
+            return user_input.format(
+                **(self._crew_context or {}),
+                **(self._user_input or {}),
+                **(self._previous_results or {})
+            )
+        except ValueError as e:
+            raise ValueError(f'\nError evaluating input: {e}\nUser input:\n---\n{user_input}\n---\n')
 
     def _get_tool_id(self, scope: typing.Optional[str] = None) -> str:
         if scope is None:
@@ -78,20 +82,23 @@ class CrewRunner:
 
     def _get_agent(self, agent_name: str, agent_scope: typing.Optional[str] = None) -> Agent:
         agent_config: dict = self._crew_config['agents'].get(agent_name)
-        return Agent(
-            role=self._evaluate_input(agent_config['role']),
-            goal=self._evaluate_input(agent_config['goal']),
-            tools=[
-                get_tool(tool, task_id=self._get_tool_id(agent_scope))
-                for tool in agent_config.get('tools') or []
-            ],
-            backstory=self._evaluate_input(agent_config['backstory']),
-            allow_delegation=False,
-            llm=self._llm,
-            embedding_model=self._embedding_model,
-            verbose=True,
-            memory=True,
-        )
+        try:
+            return Agent(
+                role=self._evaluate_input(agent_config['role']),
+                goal=self._evaluate_input(agent_config['goal']),
+                tools=[
+                    get_tool(tool, task_id=self._get_tool_id(agent_scope))
+                    for tool in agent_config.get('tools') or []
+                ],
+                backstory=self._evaluate_input(agent_config['backstory']),
+                allow_delegation=False,
+                llm=self._llm,
+                embedding_model=self._embedding_model,
+                verbose=True,
+                memory=True,
+            )
+        except ValueError as e:
+            raise ValueError(f'Error evaluating agent: {agent_name}. Error: {e}')
 
     def _get_crew_tasks(self) -> list[Task]:
         return [
@@ -159,6 +166,8 @@ class CrewRunner:
                 else:
                     rich.print(f"[red bold]Error occurred while running crew <{self._crew_name}>[/red bold]")
                     rich.print(f"[red bold]Error: {e}[/red bold]")
+                    if EXIT_ON_ERROR:
+                        os._exit(1)
                     return str(e)
 
         rich.print(f"[red bold]Exceeded maximum retries. Aborting...[/red bold]")
