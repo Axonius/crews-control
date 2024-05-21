@@ -112,7 +112,7 @@ This project exists thanks to all the people who contribute. Here are some of th
 - **Aviad Feig** ([@aviadFeig](https://github.com/aviadFeig))
   - Initial project documentation, presentation and training materials
 - **Alexey Shchukarev** ([@AlexeyShchukarev](https://github.com/AlexeyShchukarev))
-  - Project management
+  - Project management, code review and bugfixes
 - **Michael Goberman** ([@micgob](https://github.com/micgob))
   - Project management and team leadership
 
