@@ -25,15 +25,13 @@ class JiraTicketCreationTool(BaseTool):
         jira_server = os.getenv('JIRA_INSTANCE_URL')
         jira_username = os.getenv('JIRA_USERNAME')
         jira_password = os.getenv('JIRA_API_TOKEN')
+        jira_project_key = os.getenv('JIRA_CREATE_ISSUE_PROJECT_KEY')
 
         jira = JIRA(server=jira_server, basic_auth=(jira_username, jira_password))
 
-        # Hardcoded Jira project key
-        project_key = 'YOUR_PROJECT_KEY'
-
         try:
             # Create the issue
-            new_issue = jira.create_issue(project=project_key,
+            new_issue = jira.create_issue(project=jira_project_key,
                                            summary=summary,
                                            description=description,
                                            issuetype={'name': 'Task'})
