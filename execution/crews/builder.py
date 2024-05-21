@@ -134,15 +134,6 @@ class CrewRunner:
         export_path: Path = self._get_export_path()
         if not self._ignore_cache and export_path.exists():
             return export_path.read_text()
-        
-        max_retries = 5
-        retry_count = 0
-        backoff_factor = 2
-
-    def run_crew(self) -> str:
-        export_path: Path = self._get_export_path()
-        if not self._ignore_cache and export_path.exists():
-            return export_path.read_text()
 
         max_retries = 5
         retry_count = 0
