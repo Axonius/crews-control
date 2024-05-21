@@ -29,7 +29,8 @@ required_vars = [
     "JIRA_USERNAME",
     "JIRA_INSTANCE_URL",
     "JIRA_CREATE_ISSUE_PROJECT_KEY",
-    "GITHUB_TOKEN"
+    "GITHUB_TOKEN",
+    "SERPER_API_KEY"
 ]
 
 try:

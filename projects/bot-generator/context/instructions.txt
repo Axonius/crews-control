@@ -14,7 +14,7 @@
 - If more than 1 crew is needed, you need to decide if there are dependencies between crews.
 - You can decide on the agents and their roles, goals, tools, and backstory.
 - tasks don't have tools. Tools are only assigned to agents.
-- The software engineer role in the example is just an example. You can choose any roles for any number of agents.
+- The Research Analyst, Job Description Writer and Review and Editing Specialist roles in the example is just an example. You can choose any roles for any number of agents.
 - if you get inputs from the user, you can use them in descriptions, expected outputs, etc. by enclosing them in curly braces.
 - ensure that expected_output is per task and not per crew.
 - ensure that every task has an expected_output.
