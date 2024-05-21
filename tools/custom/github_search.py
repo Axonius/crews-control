@@ -10,7 +10,7 @@ class GitHubSearchTool(BaseTool):
     name: str = "GitHubSearchTool"
     description: str = (
         "You use this tool to search for code snippets in a GitHub repository. The tool uses the github rest API. If you need to search for" \
-        "code in a specific file in a known path, you can use the following query: 'path:/path/to/ filename:file.py search_query'."
+        "code in a specific file in a known path, you can use the following query: 'path:/path/to/filename search_query'."
         )
     
     def __init__(self, **kwargs):
