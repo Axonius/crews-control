@@ -38,9 +38,6 @@ COPY --from=build /usr/local/bin /usr/local/bin
 # Copy application code and other necessary files from build stage
 COPY --from=build /app /app
 
-# Copy user settings to maintain the same user in the new stage
-COPY --from=build /etc/passwd /etc/passwd
-
 # Ensure the appuser owns the necessary directories
 RUN mkdir -p /home/appuser && \
     chown -R appuser:appuser /home/appuser && \
