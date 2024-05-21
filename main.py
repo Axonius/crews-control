@@ -10,6 +10,7 @@ from execution.orchestrator import execute_crews, get_execution_config
 from models import RuntimeSettings
 from pathlib import Path
 from execution.consts import EXECUTION_CONFIG_PATH
+from utils import EnvironmentVariableNotSetError
 
 def main():
     class KeyValueAction(argparse.Action):
@@ -76,39 +77,50 @@ def main():
         )
     )
 
-    # benchmark mode
-    if runtime_settings.benchmark_mode:
-        from utils import report_success_percentage
-        benchmark_settings: dict = runtime_settings.load_benchmark_file()
-        for index, execution in enumerate(benchmark_settings.get('executions') or []):
-            rich.print(f"[grey]Running benchmark execution: <{index}>[/grey]")
-            user_inputs: dict = execution.get('user_inputs') or {}
-            validations: dict = execution.get('validations') or {}
+    try:
+        # benchmark mode
+        if runtime_settings.benchmark_mode:
+            from utils import report_success_percentage
+            benchmark_settings: dict = runtime_settings.load_benchmark_file()
+            for index, execution in enumerate(benchmark_settings.get('executions') or []):
+                rich.print(f"[grey]Running benchmark execution: <{index}>[/grey]")
+                user_inputs: dict = execution.get('user_inputs') or {}
+                validations: dict = execution.get('validations') or {}
+                validate_user_inputs(user_inputs=user_inputs,
+                                    execution_config=execution_config)
+                if runtime_settings.ignore_cache:
+                    execute_crews(project_name=runtime_settings.project_name,
+                                user_inputs=user_inputs,
+                                validations=validations,
+                                ignore_cache=True)
+                else:
+                    execute_crews(project_name=runtime_settings.project_name,
+                                user_inputs=user_inputs,
+                                validations=validations)
+        # params mode
+        elif args.params:
+            user_inputs = {}
+            for key, value in args.params.items():
+                user_inputs[key] = value
             validate_user_inputs(user_inputs=user_inputs,
-                                 execution_config=execution_config)
-            if runtime_settings.ignore_cache:
-                execute_crews(project_name=runtime_settings.project_name,
-                              user_inputs=user_inputs,
-                              validations=validations,
-                              ignore_cache=True)
-            else:
-                execute_crews(project_name=runtime_settings.project_name,
-                              user_inputs=user_inputs,
-                              validations=validations)
-    # params mode
-    elif args.params:
-        user_inputs = {}
-        for key, value in args.params.items():
-            user_inputs[key] = value
-        validate_user_inputs(user_inputs=user_inputs,
-                             execution_config=execution_config)
-        execute_crews(project_name=runtime_settings.project_name,
-                      user_inputs=user_inputs)
+                                execution_config=execution_config)
+            execute_crews(project_name=runtime_settings.project_name,
+                        user_inputs=user_inputs)
 
-    # normal mode
-    else:
-        execute_crews(project_name=runtime_settings.project_name,
-                      user_inputs=get_user_inputs(execution_config))
+        # normal mode
+        else:
+            execute_crews(project_name=runtime_settings.project_name,
+                        user_inputs=get_user_inputs(execution_config))
+    except EnvironmentVariableNotSetError as e:
+        rich.print(
+            Padding(
+                f"[bold red]Error: {str(e)}[/bold red]",
+                (2, 4),
+                expand=True,
+                style="bold red",
+            )
+        )
+        os._exit(1)
 
     if runtime_settings.benchmark_mode:
         report_success_percentage(f"projects/{runtime_settings.project_name}/validations")

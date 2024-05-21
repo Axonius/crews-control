@@ -4,7 +4,25 @@ from langchain_openai import AzureChatOpenAI
 import json
 from pathlib import Path
 
+class EnvironmentVariableNotSetError(Exception):
+    pass
+
+def validate_env_vars(*vars):
+    for var in vars:
+        if os.environ.get(var) is None:
+            raise EnvironmentVariableNotSetError(f"Environment variable '{var}' is not set.")
+
 def get_openai_clients() -> tuple[AzureChatOpenAI, AzureOpenAIEmbeddings]:
+    required_vars = [
+        "OPENAI_API_VERSION",
+        "AZURE_OPENAI_DEPLOYMENT",
+        "AZURE_OPENAI_KEY",
+        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
+        "AZURE_OPENAI_ENDPOINT"
+    ]
+    
+    validate_env_vars(*required_vars)
+
     azure_llm: AzureChatOpenAI = AzureChatOpenAI(
         temperature=0,
         openai_api_version=os.environ.get("OPENAI_API_VERSION"),
@@ -19,6 +37,13 @@ def get_openai_clients() -> tuple[AzureChatOpenAI, AzureOpenAIEmbeddings]:
     return azure_llm, azure_embeddings
 
 def get_embedchain_settings(task_id: str) -> dict:
+    required_vars = [
+        "AZURE_OPENAI_LLM_DEPLOYMENT_NAME",
+        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
+    ]
+    
+    validate_env_vars(*required_vars)
+
     return {
         'llm': {
             'provider': 'azure_openai',

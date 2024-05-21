@@ -20,7 +20,30 @@ from embedchain import App
 
 from langchain.agents import load_tools
 from utils import get_embedchain_settings
+from utils import validate_env_vars, EnvironmentVariableNotSetError
+import rich
+from rich.padding import Padding
 
+required_vars = [
+    "JIRA_API_TOKEN",
+    "JIRA_USERNAME",
+    "JIRA_INSTANCE_URL",
+    "JIRA_CREATE_ISSUE_PROJECT_KEY",
+    "GITHUB_TOKEN"
+]
+
+try:
+    validate_env_vars(*required_vars)
+except EnvironmentVariableNotSetError as e:
+        rich.print(
+            Padding(
+                f"[bold red]Error: {str(e)}[/bold red]",
+                (2, 4),
+                expand=True,
+                style="bold red",
+            )
+        )
+        os._exit(1)
 
 jira = JiraAPIWrapper(
     jira_api_token=os.getenv('JIRA_API_TOKEN'),
@@ -47,3 +70,6 @@ _TOOLS_MAP: dict[str, Callable] = {
 def get_tool(tool_name: str, task_id: typing.Optional[str] = None) -> Callable:
     app = App.from_config(config=get_embedchain_settings(task_id=task_id or 'shared'))
     return _TOOLS_MAP[tool_name](app)
+
+def list_tools():
+    return _TOOLS_MAP.keys()
