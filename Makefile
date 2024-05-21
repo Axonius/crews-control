@@ -8,11 +8,12 @@ BENCHMARK	= benchmark
 all: $(BUILD) $(RUN)
 
 $(BUILD):
+	pip install pip-tools
+	pip-compile --generate-hashes requirements.in
 	mkdir -p db
 	docker build . -t crews_control --build-arg CACHEBUSTER=$$(date +%s)
 
 $(RUN_IT):
-	make $(BUILD)
 	mkdir -p $(PWD)/projects/$(project_name)/output
 	docker run \
 		-it \
@@ -23,7 +24,6 @@ $(RUN_IT):
 		python main.py --project-name $(project_name)
 
 $(RUN):
-	make $(BUILD)
 	mkdir -p $(PWD)/projects/$(project_name)/output
 	docker run \
 		--env-file .env \
@@ -34,7 +34,6 @@ $(RUN):
 		python main.py --project-name $(project_name) --params $(PARAMS)
 
 $(BENCHMARK):
-	make $(BUILD)
 	docker run \
 		-it \
 		--env-file .env \

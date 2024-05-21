@@ -68,18 +68,21 @@ def execute_crews(project_name: str,
                 )
             else:
                 validation_results_filename: Path = Path(
-                    Path.cwd()
-                    / 'projects'
-                    / project_name
-                    / 'validations'
-                    / f'{"-".join(user_inputs.values()).
-                            replace("*","-").
-                            replace("/","-").
-                            replace("\\","-").
-                            replace(".","-").
-                            lower()}.result'
+                Path.cwd()
+                / 'projects'
+                / project_name
+                / 'validations'
+                / (
+                    "-".join(user_inputs.values())
+                    .replace("*", "-")
+                    .replace("/", "-")
+                    .replace("\\", "-")
+                    .replace(".", "-")
+                    .lower()
+                    + '.result'
+                  )
                 )
-
+            
             metrics = validations[acting_crew]['metrics']
 
             agent = Agent(

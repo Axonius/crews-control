@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --require-hashes --no-cache-dir -r requirements.txt
 
 # Invalidate cache from here onwards when needed
 ARG CACHEBUSTER=1
