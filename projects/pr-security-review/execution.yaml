@@ -49,7 +49,7 @@ crews:
           INSTRUCTIONS:
           ----------------
           - When executing a tool - ensure you don't provide action input in json format!
-          {stage_1_instructions}          
+          {stage_1_instructions}
         expected_output: >
           A markdown report detailing any security issues found in the PR code diff, including line numbers, severity,
           and recommendations for mitigation.
