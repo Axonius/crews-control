@@ -2,6 +2,9 @@ import shutil
 import argparse
 from pathlib import Path
 from rich.console import Console
+from utils import is_safe_path
+import rich
+import os
 
 console = Console()
 
@@ -13,6 +16,10 @@ def strip_code_block(yaml_content):
 def create_project_folder(yaml_file, project_name):
     projects_dir = Path.cwd() / "projects"
     projects_dir.mkdir(parents=True, exist_ok=True)
+
+    if not is_safe_path(projects_dir, Path(project_name)):
+        rich.print(f"[bold red]Error: Path traversal detected in project name {project_name}[/bold red]")
+        os._exit(1)
 
     project_folder = projects_dir / project_name
     project_folder.mkdir(exist_ok=True)

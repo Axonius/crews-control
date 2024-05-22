@@ -8,6 +8,7 @@ from crewai import Task, Agent, Crew
 from execution.contexts import load_crew_contexts
 from execution.consts import EXIT_ON_ERROR
 from tools.index import get_tool
+from utils import is_safe_path
 
 class NoAgentFoundError(Exception):
     pass
@@ -135,7 +136,9 @@ class CrewRunner:
             rich.print(f"[green bold]Crew <{self._crew_name}> result:\n{results}\n\n[/green bold]")
 
     def _get_export_path(self) -> Path:
-        return Path.cwd() / 'projects' / self._project_name / 'output' / self._output_file
+        if not is_safe_path(Path.cwd() / 'projects' / self._project_name / 'output', Path(self._output_file)):
+            rich.print(f"[red bold]Error: Directory traversal detected in output file {self._output_file}[/red bold]")
+            os._exit(1)
 
     def run_crew(self) -> str:
         export_path: Path = self._get_export_path()
