@@ -9,17 +9,115 @@
 - **Artifact Generation:** Each crew outputs a file artifact from the final task.
 - **Templated Outputs:** Access outputs from previous crews’ tasks using a templating syntax.
 
-## Getting Started
+## Licensing
 
-### Installation
+### Main Project (MIT License)
+All files in this repository, except for the `requirements.in` and `requirements.txt` files, are licensed under the MIT License. You can find the full text of the MIT License in the [LICENSE](LICENSE) file.
 
+### Requirements Files (GPL License)
+The `requirements.in` and `requirements.txt` files, which list the dependencies required to run this project, are licensed under the GNU General Public License (GPL). You can find the full text of the GPL in the [LICENSE-REQUIREMENTS](LICENSE-REQUIREMENTS) file.
+
+### Why Dual Licensing?
+Some dependencies listed in `requirements.in` and `requirements.txt` are licensed under the GPL. To comply with their licensing terms, these files themselves are licensed under the GPL. This ensures that users are aware of and comply with the GPL when using these dependencies.
+
+## Prerequisites
+
+1. Python 3.12 (may work with other versions. Untested)
+
+2. Docker (optional) - to run dockerized version.
+
+3. API keys listed in [.env.example](.env.example)
+
+## Installation
+
+### Mac / Linux
+
+1. Clone the repository:
 ```bash
-# Clone the repository
 git clone https://github.com/Axonius/crews-control.git
 cd crews-control
+```
 
-# Install dependencies
-pip install -r requirements.txt
+2. Create a virtual environment
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+3. Compile requirements.txt file (optional)
+```bash
+pip install pip-tools
+pip-compile --generate-hashes requirements.in
+```
+
+4. Install the dependencies:
+```bash
+pip install --require-hashes --no-cache-dir -r requirements.txt
+```
+
+#### Usage
+TBD
+
+### Windows
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Axonius/crews-control.git
+cd crews-control
+```
+
+2. Create a virtual environment
+```bash
+python -m venv .venv
+.venv/Scripts/activate
+```
+
+3. Compile requirements.txt file (optional)
+```bash
+pip install pip-tools
+pip-compile --generate-hashes requirements.in
+```
+
+4. Install the dependencies:
+```bash
+pip install --require-hashes --no-cache-dir -r requirements.txt
+```
+
+#### Usage
+TBD
+
+### Docker
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Axonius/crews-control.git
+cd crews-control
+```
+
+2. Compile requirements.txt file (optional)
+```bash
+make compile-requirements
+```
+
+3. Build the Crews-Control Docker image
+```bash
+make build
+```
+
+#### Usage
+
+**Run a project (interactive-mode):**
+```bash
+make run_it project_name=<PROJECT_TO_RUN>
+```
+**Run a project (cli-mode):**
+```bash
+make run project_name=<PROJECT_TO_RUN> PARAMS="<input1='value 1' input2='value 2' ... inputN='value N'>"
+```
+
+Example - run the `pr-security-review` project to review `PR #1` of the `Axonius/crews-control` GitHub repository:
+```bash
+make run project_name=pr-security-review PARAMS="github_repo_name='Axonius/crews-control' pr_number='1'"
 ```
 
 ### Creating a Project
@@ -99,6 +197,41 @@ crews:
           {user_input_2}, {optional_user_input_3} and {some_agent} here.
 ```
 
+TBD - continue documentation
+
+## Compliance
+
+By using the dependencies listed in `requirements.txt`, you agree to comply with the terms of the GPL for those dependencies. This means that:
+- If you distribute a derivative work that includes GPL-licensed dependencies, you must release the source code of the entire work under the GPL.
+- You must include a copy of the GPL license with any distribution of the work.
+
+### How to Use This Project
+
+To use this project while complying with the licenses:
+1. Keep the main project code and the `requirements.txt` file separate when possible.
+2. Clearly indicate which parts of your project are under the MIT license and which parts are under the GPL if you make modifications or distribute the project.
+
+## Contribution
+
+Contributions to the main project code should be made under the terms of the MIT License. Contributions to the `requirements.txt` file should comply with the GPL.
+
+## Third-Party Licenses
+
+This project uses third-party packages that are distributed under their own licenses. For a full list of these packages and their licenses, see the [LICENSES.md](LICENSES.md) file.
+
+## FAQ
+
+### Why is the `requirements.txt` file licensed under the GPL?
+The `requirements.txt` file includes dependencies that are licensed under the GPL. To comply with the GPL's copyleft requirements, the `requirements.txt` file itself is licensed under the GPL.
+
+### Can I use this project for commercial purposes?
+Yes, you can use the main project code for commercial purposes under the MIT License. However, you must comply with the GPL for any dependencies listed in the `requirements.txt` file.
+
+### Do I need to release my project under the GPL?
+If you modify and distribute the project including the dependencies listed in `requirements.txt`, you must comply with the GPL for those dependencies. This typically means releasing your modifications under the GPL.
+
+For further details, please refer to the [GNU General Public License](LICENSE-REQUIREMENTS) and the [MIT License](LICENSE).
+
 ## Contributors
 
 This project exists thanks to all the people who contribute. Here are some of the key contributors:
@@ -124,13 +257,3 @@ This project builds upon the following MIT-licensed project:
 - **[crewAI](https://github.com/joaomdmoura/crewAI)** by [João Moura | crewAI™, Inc.](https://github.com/joaomdmoura/) 
 
 For a complete list of contributors, see the [CONTRIBUTORS.md](CONTRIBUTORS.md) file.
-
-## TBD
-Documentation
-
-## License
-Crews-Control is released under the [MIT License](LICENSE).
-
-## Third-Party Licenses
-
-This project uses third-party packages that are distributed under their own licenses. For a full list of these packages and their licenses, see the [LICENSES.md](LICENSES.md) file.
