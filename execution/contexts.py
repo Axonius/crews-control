@@ -1,6 +1,8 @@
 import abc
 import os
 from pathlib import Path
+from utils import is_safe_path
+import rich
 
 CONTEXT_DIRECTORY_PATH = 'context'
 
@@ -18,6 +20,10 @@ class ContextFileReader(IFileReader):
     def read(self, context_name: str, project_name: str) -> str:
         if not context_name:
             raise ValueError('context name is required.')
+
+        if not is_safe_path(Path.cwd() / 'projects', Path(project_name)):
+            rich.print(f"[red bold]Error: Directory traversal detected in project name {project_name}[/red bold]")
+            os._exit(1)
 
         path = Path.cwd() / 'projects' / project_name / self.context_directory_path
         if not path.exists():

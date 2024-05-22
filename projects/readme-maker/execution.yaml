@@ -1,0 +1,92 @@
+settings:
+  output_results: true
+
+user_inputs:
+  repository_name:
+    title: "Repository name"
+
+crews:
+  analyze_repository_crew:
+    output_naming_template: 'analyze_repository_report.md'
+    agents:
+      repository_analyst:
+        role: "Repository Analyst"
+        goal: >
+          Analyze the GitHub repository {repository_name} to extract information about the project's installation and usage.
+        tools:
+          - github_search
+        backstory: >
+          An expert in navigating and understanding code repositories to gather essential project details.
+    tasks:
+      analyze_repository_task:
+        agent: repository_analyst
+        description: >
+          Analyze the GitHub repository to gather information about the project. Focus on identifying
+          installation instructions, usage examples, dependencies, and any other relevant details that
+          users need to know to get started with the project.
+        expected_output: >
+          A report summarizing the installation process, usage instructions, dependencies, and other
+          relevant details about the project.
+
+  draft_readme_crew:
+    output_naming_template: 'README.md'
+    agents:
+      documentation_writer:
+        role: "Documentation Writer"
+        goal: >
+          Draft a README.md file that clearly describes how to install and use the project, based on the
+          information provided by the Repository Analyst.
+        backstory: >
+          A skilled technical writer with experience in creating user-friendly documentation and guides.
+    tasks:
+      draft_readme_task:
+        agent: documentation_writer
+        description: >
+          Using the information from the Repository Analyst, draft a README.md file that includes a
+          welcoming introduction, clear installation instructions, usage examples, and a list of
+          dependencies. Ensure the document is well-structured and easy to follow.
+
+          Information from the Repository Analyst:
+
+          ---------------------
+          
+          {analyze_repository_crew}
+
+          ---------------------
+        expected_output: >
+          A draft of the README.md file that includes all necessary sections and information for users to
+          understand how to install and use the project.
+
+  review_and_edit_readme_crew:
+    output_naming_template: 'final_README.md'
+    agents:
+      quality_assurance_specialist:
+        role: "Quality Assurance Specialist"
+        goal: >
+          Review and edit the README.md file to ensure accuracy, clarity, and that it meets the project's
+          standards.
+        tools:
+          - serper
+          - website_search
+        backstory: >
+          Detail-oriented and experienced in ensuring the quality and clarity of technical documentation.
+    tasks:
+      review_and_edit_readme_task:
+        agent: quality_assurance_specialist
+        description: >
+          Review the draft README.md file for accuracy, clarity, and completeness. Edit the document to
+          correct any errors, improve readability, and ensure it aligns with the project's standards.
+          Provide feedback for any necessary revisions.
+
+          draft README.md file:
+
+          ---------------------
+
+          {draft_readme_crew}
+
+          ---------------------
+
+        expected_output: >
+          A polished, error-free README.md file that is clear, engaging, and provides all the necessary
+          information for users to install and use the project. Feedback on potential improvements and
+          final approval for publishing.
