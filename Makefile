@@ -4,12 +4,15 @@ RUN_IT		= run_it
 CLEAN		= clean
 TEST		= test
 BENCHMARK	= benchmark
+COMPILE_REQUIREMENTS = compile-requirements
 
-all: $(BUILD) $(RUN)
+all: $(COMPILE_REQUIREMENTS) $(BUILD) $(RUN_IT)
 
-$(BUILD):
+$(COMPILE_REQUIREMENTS):
 	pip install pip-tools
 	pip-compile --generate-hashes requirements.in
+
+$(BUILD):
 	mkdir -p db
 	docker build . -t crews_control --build-arg CACHEBUSTER=$$(date +%s)
 
@@ -54,4 +57,4 @@ $(TEST):
 	make $(BUILD)
 	docker run -it --env-file .env -v $(PWD)/db:/app/db crews_control pytest execution/tests/ -vvv
 
-.PHONY: all $(BUILD) $(RUN)
+.PHONY: all $(BUILD) $(RUN) $(RUN_IT) $(CLEAN) $(TEST) $(BENCHMARK) $(COMPILE_REQUIREMENTS)
