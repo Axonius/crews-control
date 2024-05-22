@@ -21,7 +21,7 @@ class ContextFileReader(IFileReader):
         if not context_name:
             raise ValueError('context name is required.')
 
-        if not is_safe_path(Path.cwd() / 'projects', Path(project_name)):
+        if not is_safe_path(Path.cwd() / 'projects', Path.cwd() / 'projects' / project_name):
             rich.print(f"[red bold]Error: Directory traversal detected in project name {project_name}[/red bold]")
             os._exit(1)
 

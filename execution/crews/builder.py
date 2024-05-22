@@ -136,9 +136,11 @@ class CrewRunner:
             rich.print(f"[green bold]Crew <{self._crew_name}> result:\n{results}\n\n[/green bold]")
 
     def _get_export_path(self) -> Path:
-        if not is_safe_path(Path.cwd() / 'projects' / self._project_name / 'output', Path(self._output_file)):
+        if not is_safe_path(Path.cwd() / 'projects' / self._project_name / 'output',
+                            Path.cwd() / 'projects' / self._project_name / 'output' / self._output_file):
             rich.print(f"[red bold]Error: Directory traversal detected in output file {self._output_file}[/red bold]")
             os._exit(1)
+        return Path.cwd() / 'projects' / self._project_name / 'output' / self._output_file
 
     def run_crew(self) -> str:
         export_path: Path = self._get_export_path()

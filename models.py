@@ -29,7 +29,7 @@ class RuntimeSettings(pydantic.BaseModel):
             ```
         """
         try:
-            if not is_safe_path(Path.cwd() / 'projects', Path(self.project_name / BENCHMARK_CONFIG_PATH)):
+            if not is_safe_path(Path.cwd() / 'projects', Path.cwd() / 'projects' / self.project_name / BENCHMARK_CONFIG_PATH):
                 if EXIT_ON_ERROR:
                     rich.print(
                         rich.padding.Padding(

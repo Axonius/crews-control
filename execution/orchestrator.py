@@ -19,7 +19,7 @@ def execute_crews(project_name: str,
     if not user_inputs:
         user_inputs = {}
 
-    if not is_safe_path(Path.cwd() / 'projects', Path(project_name)):
+    if not is_safe_path(Path.cwd() / 'projects', Path.cwd() / 'projects' / project_name):
         rich.print(
             f"[bold red]Error: Path traversal detected in project name: {project_name}[/bold red]"
         )
@@ -158,7 +158,7 @@ def execute_crews(project_name: str,
 
 
 def get_execution_config(project_name: str) -> dict:
-    if not is_safe_path(Path.cwd() / 'projects', Path(project_name) / EXECUTION_CONFIG_PATH):
+    if not is_safe_path(Path.cwd() / 'projects', Path.cwd() / 'projects' / project_name / EXECUTION_CONFIG_PATH):
         rich.print(
             f"[bold red]Error: Directory traversal detected in project name: {project_name} [/bold red]"
         )

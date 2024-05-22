@@ -134,7 +134,7 @@ def main():
         os._exit(1)
 
     if runtime_settings.benchmark_mode:
-        if not is_safe_path(Path.cwd() / 'projects', Path(runtime_settings.project_name / 'validations')):
+        if not is_safe_path(Path.cwd() / 'projects', Path.cwd() / 'projects' / runtime_settings.project_name / 'validations'):
             rich.print(
                 f"[bold red]Error: Path traversal detected in project name {runtime_settings.project_name}[/bold red]"
             )
