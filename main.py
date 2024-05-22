@@ -111,6 +111,16 @@ def main():
         else:
             execute_crews(project_name=runtime_settings.project_name,
                         user_inputs=get_user_inputs(execution_config))
+    except FileNotFoundError as e:
+        rich.print(
+            Padding(
+                f"[bold red]Error: {str(e)}[/bold red]",
+                (2, 4),
+                expand=True,
+                style="bold red",
+            )
+        )
+        os._exit(1)
     except EnvironmentVariableNotSetError as e:
         rich.print(
             Padding(

@@ -8,7 +8,18 @@ from execution.crews.builder import CrewRunner
 from execution.graph import get_crews_execution_order
 from utils import get_openai_clients
 import os
+import re
 
+def sanitize_filename(filename: str) -> str:
+    """Sanitize the filename by replacing non-alphanumeric characters with underscores."""
+    return re.sub(r'[^a-zA-Z0-9]', '_', filename).lower()
+
+def is_safe_path(base_dir: Path, path: Path) -> bool:
+    """Check if the resolved path is within the base directory to prevent path traversal."""
+    try:
+        return path.resolve().is_relative_to(base_dir.resolve())
+    except ValueError:
+        return False
 
 def execute_crews(project_name: str,
                   user_inputs: dict = None,
@@ -47,41 +58,39 @@ def execute_crews(project_name: str,
         if validations and acting_crew in validations:
             from crewai import Task, Agent, Crew
             import textwrap
-            compare_to = validations[acting_crew]['compare_to']
+            validations_compare_to = validations[acting_crew]['compare_to']
             compare_to_filename: Path = (
                 Path.cwd()
                 / 'projects'
                 / project_name
                 / 'validations'
-                / compare_to
+                / validations_compare_to
             )
             if compare_to_filename.exists():
-                with open(compare_to_filename, 'r') as file:
-                    compare_to = file.read()
-
-                validation_results_filename: Path = (
+                if is_safe_path(Path.cwd() / 'projects' / project_name, compare_to_filename):
+                    with open(compare_to_filename, 'r') as file:
+                        # validations_compare_to is a filename, overwrite var with its content to be used below
+                        validations_compare_to = file.read()
+                    validation_results_filename: Path = Path(f'{compare_to_filename}.result') # no need to sanitize filename or check path traversal as just adding an extension to validated path.
+                else:
+                    rich.print(
+                        f"[bold red]Error: Path traversal detected in {compare_to_filename}[/bold red]"
+                    )
+                    os._exit(1)
+            else:
+                input_values_filename = f'{sanitize_filename("_".join(user_inputs.values()))}.result'
+                validation_results_filename: Path = Path(
                     Path.cwd()
                     / 'projects'
                     / project_name
                     / 'validations'
-                    / f'{compare_to}.result'
+                    / input_values_filename
                 )
-            else:
-                validation_results_filename: Path = Path(
-                Path.cwd()
-                / 'projects'
-                / project_name
-                / 'validations'
-                / (
-                    "-".join(user_inputs.values())
-                    .replace("*", "-")
-                    .replace("/", "-")
-                    .replace("\\", "-")
-                    .replace(".", "-")
-                    .lower()
-                    + '.result'
-                  )
-                )
+                if not is_safe_path(Path.cwd() / 'projects' / project_name, validation_results_filename):
+                    rich.print(
+                        f"[bold red]Error: Path traversal detected in {validation_results_filename}[/bold red]"
+                    )
+                    os._exit(1)
             
             metrics = validations[acting_crew]['metrics']
 
@@ -111,7 +120,7 @@ def execute_crews(project_name: str,
                     <<<<RESULT_END_MARKER>>>>
 
                     <<<<EXPECTED_OUTPUT_START_MARKER>>>>
-                    {compare_to}
+                    {validations_compare_to}
                     <<<<EXPECTED_OUTPUT_END_MARKER>>>>
                 """),
                 expected_output = textwrap.dedent(
@@ -127,6 +136,8 @@ def execute_crews(project_name: str,
                         - Example response is the text above enclosed between horizontal lines (without the lines).
                         - Ensure the output is a direct json string (not enclosed in json code-block).
                         - Ensure there is no text before or after the json object.
+                        - You MUST provide comparison reason for each failed check - i.e., what is the difference between the actual and expected output for the specific check.
+                        - Reason MUST be succinct and clear.
                         """),
                 tools = [],
                 agent = agent,

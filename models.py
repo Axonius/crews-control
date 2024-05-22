@@ -27,7 +27,10 @@ class RuntimeSettings(pydantic.BaseModel):
                     ...
             ```
         """
-        with open(
-            Path.cwd() / 'projects' / self.project_name / BENCHMARK_CONFIG_PATH, 'r'
-        ) as file:
-            return yaml.safe_load(file)
+        try:
+            with open(
+                Path.cwd() / 'projects' / self.project_name / BENCHMARK_CONFIG_PATH, 'r'
+            ) as file:
+                return yaml.safe_load(file)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Benchmark file not found for project {self.project_name}")
