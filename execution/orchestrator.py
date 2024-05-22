@@ -7,19 +7,9 @@ from execution.consts import EXECUTION_CONFIG_PATH
 from execution.crews.builder import CrewRunner
 from execution.graph import get_crews_execution_order
 from utils import get_openai_clients
+from utils import sanitize_filename
+from utils import is_safe_path
 import os
-import re
-
-def sanitize_filename(filename: str) -> str:
-    """Sanitize the filename by replacing non-alphanumeric characters with underscores."""
-    return re.sub(r'[^a-zA-Z0-9]', '_', filename).lower()
-
-def is_safe_path(base_dir: Path, path: Path) -> bool:
-    """Check if the resolved path is within the base directory to prevent path traversal."""
-    try:
-        return path.resolve().is_relative_to(base_dir.resolve())
-    except ValueError:
-        return False
 
 def execute_crews(project_name: str,
                   user_inputs: dict = None,
@@ -28,6 +18,12 @@ def execute_crews(project_name: str,
     """Execute crews in the order defined in the execution config."""
     if not user_inputs:
         user_inputs = {}
+
+    if not is_safe_path(Path.cwd() / 'projects', Path(project_name)):
+        rich.print(
+            f"[bold red]Error: Path traversal detected in project name: {project_name}[/bold red]"
+        )
+        os._exit(1)
 
     execution_config: dict = get_execution_config(project_name)
     llm, embedding_model = get_openai_clients()
@@ -150,11 +146,24 @@ def execute_crews(project_name: str,
             validation_result = crew.kickoff()
             if not validation_results_filename.parent.exists():
                 validation_results_filename.parent.mkdir(parents=True)
+
+            if not is_safe_path(Path.cwd() / 'projects' / project_name, validation_results_filename):
+                rich.print(
+                    f"[bold red]Error: Path traversal detected in {validation_results_filename}[/bold red]"
+                )
+                os._exit(1)
+
             with open(validation_results_filename, 'w') as file:
                 file.write(validation_result)
 
 
 def get_execution_config(project_name: str) -> dict:
+    if not is_safe_path(Path.cwd() / 'projects', Path(project_name) / EXECUTION_CONFIG_PATH):
+        rich.print(
+            f"[bold red]Error: Directory traversal detected in project name: {project_name} [/bold red]"
+        )
+        os._exit(1)
+
     with open(
         Path.cwd() / 'projects' / project_name / EXECUTION_CONFIG_PATH, 'r'
     ) as file:

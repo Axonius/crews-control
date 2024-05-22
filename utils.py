@@ -3,9 +3,22 @@ from langchain_openai import AzureOpenAIEmbeddings
 from langchain_openai import AzureChatOpenAI
 import json
 from pathlib import Path
+import re
 
 class EnvironmentVariableNotSetError(Exception):
     pass
+
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize the filename by replacing non-alphanumeric characters with underscores."""
+    return re.sub(r'[^a-zA-Z0-9]', '_', filename).lower()
+
+def is_safe_path(base_dir: Path, path: Path) -> bool:
+    """Check if the resolved path is within the base directory to prevent path traversal."""
+    try:
+        return path.resolve().is_relative_to(base_dir.resolve())
+    except ValueError:
+        return False
 
 def validate_env_vars(*vars):
     for var in vars:

@@ -11,6 +11,7 @@ from models import RuntimeSettings
 from pathlib import Path
 from execution.consts import EXECUTION_CONFIG_PATH
 from utils import EnvironmentVariableNotSetError
+from utils import is_safe_path
 
 def main():
     class KeyValueAction(argparse.Action):
@@ -133,6 +134,12 @@ def main():
         os._exit(1)
 
     if runtime_settings.benchmark_mode:
+        if not is_safe_path(Path.cwd() / 'projects', Path(runtime_settings.project_name / 'validations')):
+            rich.print(
+                f"[bold red]Error: Path traversal detected in project name {runtime_settings.project_name}[/bold red]"
+            )
+            os._exit(1)
+
         report_success_percentage(f"projects/{runtime_settings.project_name}/validations")
 
 if __name__ == "__main__":

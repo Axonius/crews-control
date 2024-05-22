@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
-
 import pydantic
 import yaml
-
 from execution.consts import BENCHMARK_CONFIG_PATH
-
+from execution.consts import EXIT_ON_ERROR
+from utils import is_safe_path
+import rich
+import rich.padding
 
 class RuntimeSettings(pydantic.BaseModel):
     project_name: str
@@ -28,6 +29,20 @@ class RuntimeSettings(pydantic.BaseModel):
             ```
         """
         try:
+            if not is_safe_path(Path.cwd() / 'projects', Path(self.project_name / BENCHMARK_CONFIG_PATH)):
+                if EXIT_ON_ERROR:
+                    rich.print(
+                        rich.padding.Padding(
+                            f"[bold red]Error: Directory traversal detected in project name[/bold red]",
+                            (2, 4),
+                            expand=True,
+                            style="bold red",
+                        )
+                    )
+                    os._exit(1)
+                else:
+                    raise FileNotFoundError("Directory traversal detected in project name")
+            
             with open(
                 Path.cwd() / 'projects' / self.project_name / BENCHMARK_CONFIG_PATH, 'r'
             ) as file:
