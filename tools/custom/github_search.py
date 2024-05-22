@@ -11,39 +11,53 @@ class GitHubSearchTool(BaseTool):
     description: str = (
         """You use this tool to search for query terms inside of a file in a GitHub repository.
         
-        The tool uses the github rest API. If you need to search for
-        code in a specific file in a known path, you can use the following query: 'path:/path/to/filename search_query'.
+        Except with filename searches, you must always include at least one search term when searching source code.
+        For example, searching for language:javascript is not valid, while amazing language:javascript is.
 
-        
-        You can get text match metadata for the file content and file path fields when you pass the text-match media type.
+        At most, search results can show two fragments from the same file, but there may be more results within the file.
+        You can't use the following wildcard characters as part of your search query:
 
+        ---
+        . , : ; / \\ ` ' " = * ! ? # $ & + ^ | ~ < > ( ) { } [ ] @
+        ---
 
-        For example, if you want to find the definition of the addClass function, your query would look something like this:
+        The search will simply ignore these symbols.
 
-        ```
-        addClass in:file language:js
-        ```
+        With the `in` qualifier you can restrict your search to the contents of the source code file, the file path, or both.
+        When you omit this qualifier, only the file contents are searched.
 
-        This query searches for the keyword addClass within a file's contents. The query limits the search to files where the
-        language is JavaScript in the repository.
+        in:file - Only code in the file is searched. Example: "octocat in:file" matches code where "octocat" appears in the file contents.
+        in:path - Only the file path is searched. Example: "octocat in:path" matches code where "octocat" appears in the file path.
+        in:file,path - Code in the file and the file path is searched. Example: "octocat in:file,path" matches code where "octocat" appears in the file contents or the file path.
 
-        there are a few restrictions on how searches are performed:
+        You can use the `path` qualifier to search for source code that appears at a specific location in a repository.
+        Use "path:/" to search for files that are located at the root level of a repository.
+        Or specify a directory name or the path to a directory to search for files that are located within that directory or any of its subdirectories.
 
-        - Only the default branch is considered.
-        - Only files smaller than 384 KB are searchable.
-        - You *MUST ALWAYS* include at least one search term when searching source code.
-          For example, searching for "language:go" is not valid, while "amazing language:go" is.
-          Another example, searching for "path:/README.md" is not valid, while "amazing path:/README.md" is.
+        path:/ - Search for files located at the root level of a repository. Example: "octocat filename:readme path:/" matches readme files with the word "octocat" that are located at the root level of a repository.
+        path:DIRECTORY - Search for files in a specific directory or path. Example: "form path:cgi-bin language:perl" matches Perl files with the word "form" in the cgi-bin directory, or in any of its subdirectories.
+        path:PATH/TO/DIRECTORY - Search for files in a specific directory or path. Example: "console path:app/public language:javascript" matches JavaScript files with the word "console" in the app/public directory, or in any of its subdirectories (even if they reside in app/public/js/form-validators).
 
-        The query contains one or more search keywords and qualifiers.
-        Qualifiers allow you to limit your search to specific areas of GitHub.
-        The REST API supports the same qualifiers as the web interface for GitHub. 
+        You can search for code based on what language it's written in. The language qualifier can be the language name or alias.
 
-        A query can contain any combination of search qualifiers supported on GitHub. The format of the search query is:
+        language:LANGUAGE - Example: "element language:xml size:100" matches code with the word "element" that's marked as being XML and has exactly 100 bytes.
+        language:LANGUAGE - Example: "display language:scss" matches code with the word "display," that's marked as being SCSS.
 
-        ```
-        SEARCH_KEYWORD_1 SEARCH_KEYWORD_N QUALIFIER_1 QUALIFIER_N
-        ```
+        You can use the size qualifier to search for source code based on the size of the file where the code exists.
+        The size qualifier uses greater than, less than, and range qualifiers to filter results based on the byte size of the file in which the code is found.
+
+        size:n - Example: "function size:>10000 language:python" matches code with the word "function," written in Python, in files that are larger than 10 KB.
+
+        The filename qualifier matches code files with a certain filename. You can also find a file in a repository using the file finder.
+
+        filename:FILENAME - Example: "filename:linguist" matches files named "linguist".
+        filename:FILENAME - Example: "filename:.vimrc commands" matches .vimrc files with the word "commands."
+        filename:FILENAME - Example: "filename:test_helper path:test language:ruby" matches Ruby files named test_helper within the test directory.
+
+        The extension qualifier matches code files with a certain file extension.
+
+        extension:EXTENSION	- Example: "form path:cgi-bin extension:pm" matches code with the word "form," under cgi-bin, with the .pm file extension.
+        extension:EXTENSION	- Example: "icon size:>200000 extension:css" matches files larger than 200 KB that end in .css and have the word "icon".
         """
         )
     
