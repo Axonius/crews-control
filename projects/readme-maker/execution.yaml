@@ -7,7 +7,7 @@ user_inputs:
 
 crews:
   analyze_repository_crew:
-    output_naming_template: 'analyze_repository_report.md'
+    output_naming_template: '{repository_name}-analyze_repository_report.md'
     agents:
       repository_analyst:
         role: "Repository Analyst"
@@ -29,7 +29,7 @@ crews:
           relevant details about the project.
 
   draft_readme_crew:
-    output_naming_template: 'README.md'
+    output_naming_template: '{repository_name}-README.md'
     agents:
       documentation_writer:
         role: "Documentation Writer"
@@ -58,7 +58,7 @@ crews:
           understand how to install and use the project.
 
   review_and_edit_readme_crew:
-    output_naming_template: 'final_README.md'
+    output_naming_template: '{repository_name}-final_README.md'
     agents:
       quality_assurance_specialist:
         role: "Quality Assurance Specialist"
