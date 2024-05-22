@@ -9,8 +9,42 @@ class GitHubSearchTool(BaseTool):
     """A tool that searches for code snippets in a GitHub repository."""
     name: str = "GitHubSearchTool"
     description: str = (
-        "You use this tool to search for code snippets in a GitHub repository. The tool uses the github rest API. If you need to search for" \
-        "code in a specific file in a known path, you can use the following query: 'path:/path/to/filename search_query'."
+        """You use this tool to search for query terms inside of a file in a GitHub repository.
+        
+        The tool uses the github rest API. If you need to search for
+        code in a specific file in a known path, you can use the following query: 'path:/path/to/filename search_query'.
+
+        
+        You can get text match metadata for the file content and file path fields when you pass the text-match media type.
+
+
+        For example, if you want to find the definition of the addClass function, your query would look something like this:
+
+        ```
+        addClass in:file language:js
+        ```
+
+        This query searches for the keyword addClass within a file's contents. The query limits the search to files where the
+        language is JavaScript in the repository.
+
+        there are a few restrictions on how searches are performed:
+
+        - Only the default branch is considered.
+        - Only files smaller than 384 KB are searchable.
+        - You *MUST ALWAYS* include at least one search term when searching source code.
+          For example, searching for "language:go" is not valid, while "amazing language:go" is.
+          Another example, searching for "path:/README.md" is not valid, while "amazing path:/README.md" is.
+
+        The query contains one or more search keywords and qualifiers.
+        Qualifiers allow you to limit your search to specific areas of GitHub.
+        The REST API supports the same qualifiers as the web interface for GitHub. 
+
+        A query can contain any combination of search qualifiers supported on GitHub. The format of the search query is:
+
+        ```
+        SEARCH_KEYWORD_1 SEARCH_KEYWORD_N QUALIFIER_1 QUALIFIER_N
+        ```
+        """
         )
     
     def __init__(self, **kwargs):
