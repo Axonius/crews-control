@@ -89,24 +89,20 @@ def main():
                 validations: dict = execution.get('validations') or {}
                 validate_user_inputs(user_inputs=user_inputs,
                                     execution_config=execution_config)
-                if runtime_settings.ignore_cache:
-                    execute_crews(project_name=runtime_settings.project_name,
-                                user_inputs=user_inputs,
-                                validations=validations,
-                                ignore_cache=True)
-                else:
-                    execute_crews(project_name=runtime_settings.project_name,
-                                user_inputs=user_inputs,
-                                validations=validations)
+                execute_crews(project_name=runtime_settings.project_name,
+                            user_inputs=user_inputs,
+                            validations=validations,
+                            ignore_cache=runtime_settings.ignore_cache)
         # params mode
         elif args.params:
             user_inputs = {}
             for key, value in args.params.items():
                 user_inputs[key] = value
             validate_user_inputs(user_inputs=user_inputs,
-                                execution_config=execution_config)
+                                 execution_config=execution_config)
             execute_crews(project_name=runtime_settings.project_name,
-                        user_inputs=user_inputs)
+                          user_inputs=user_inputs,
+                          ignore_cache=runtime_settings.ignore_cache)
 
         # normal mode
         else:
