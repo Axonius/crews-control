@@ -1,6 +1,6 @@
 # Crews Control
 
-**Crews Control** is an abstraction layer on top of CrewAI, designed to facilitate the creation and execution of AI-driven projects without writing code. By defining an `execution.yaml` file, users can orchestrate AI crews to accomplish complex tasks using predefined or custom tools.
+**Crews Control** is an abstraction layer on top of [crewAI](https://www.crewai.com/), designed to facilitate the creation and execution of AI-driven projects without writing code. By defining an `execution.yaml` file, users can orchestrate AI crews to accomplish complex tasks using predefined or custom tools.
 
 ## Features
 
@@ -10,6 +10,9 @@
 - **Templated Outputs:** Access outputs from previous crews’ tasks using a templating syntax.
 
 ## Licensing
+
+### Disclaimer
+TBD
 
 ### Main Project (MIT License)
 All files in this repository, except for the `requirements.in` and `requirements.txt` files, are licensed under the MIT License. You can find the full text of the MIT License in the [LICENSE](LICENSE) file.
@@ -218,19 +221,6 @@ Contributions to the main project code should be made under the terms of the MIT
 ## Third-Party Licenses
 
 This project uses third-party packages that are distributed under their own licenses. For a full list of these packages and their licenses, see the [LICENSES.md](LICENSES.md) file.
-
-## FAQ
-
-### Why is the `requirements.txt` file licensed under the GPL?
-The `requirements.txt` file includes dependencies that are licensed under the GPL. To comply with the GPL's copyleft requirements, the `requirements.txt` file itself is licensed under the GPL.
-
-### Can I use this project for commercial purposes?
-Yes, you can use the main project code for commercial purposes under the MIT License. However, you must comply with the GPL for any dependencies listed in the `requirements.txt` file.
-
-### Do I need to release my project under the GPL?
-If you modify and distribute the project including the dependencies listed in `requirements.txt`, you must comply with the GPL for those dependencies. This typically means releasing your modifications under the GPL.
-
-For further details, please refer to the [GNU General Public License](LICENSE-REQUIREMENTS) and the [MIT License](LICENSE).
 
 ## Contributors
 

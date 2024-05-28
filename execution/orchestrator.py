@@ -6,10 +6,12 @@ import yaml
 from execution.consts import EXECUTION_CONFIG_PATH
 from execution.crews.builder import CrewRunner
 from execution.graph import get_crews_execution_order
-from utils import get_openai_clients
+from utils import get_clients
 from utils import sanitize_filename
 from utils import is_safe_path
 import os
+from utils import validate_env_vars
+validate_env_vars('LLM_NAME', 'EMBEDDER_NAME')
 
 def execute_crews(project_name: str,
                   user_inputs: dict = None,
@@ -26,7 +28,9 @@ def execute_crews(project_name: str,
         os._exit(1)
 
     execution_config: dict = get_execution_config(project_name)
-    llm, embedding_model = get_openai_clients()
+    llm_name: str = os.getenv('LLM_NAME')
+    embedder_name: str = os.getenv('EMBEDDER_NAME')
+    llm, embedding_model = get_clients(llm_name, embedder_name)
     execution_order: list[str] = get_crews_execution_order(execution_config)
 
     rich.print(

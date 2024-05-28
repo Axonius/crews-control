@@ -21,8 +21,6 @@ def input_func() -> str:
         contents.append(line)
     return "\n".join(contents)
 
-
-
 class HumanTool(BaseTool):
     """Tool that adds the capability to ask user for multi line input."""
 

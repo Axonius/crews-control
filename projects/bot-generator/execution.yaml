@@ -24,7 +24,6 @@ crews:
           You are an expert in CrewAI and have experience in creating execution.yaml files for various bots.
         tools:
           - serper
-          - youtube
           - human
           - website_search
 

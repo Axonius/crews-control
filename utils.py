@@ -1,6 +1,8 @@
 import os
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_openai import AzureChatOpenAI
+from langchain_groq import ChatGroq
+from langchain_community.embeddings import GPT4AllEmbeddings
 import json
 from pathlib import Path
 import re
@@ -21,61 +23,91 @@ def is_safe_path(base_dir: Path, path: Path) -> bool:
         return False
 
 def validate_env_vars(*vars):
+    # Handle single list or tuple containing a list
+    if len(vars) == 1 and isinstance(vars[0], list):
+        vars = vars[0]
+
     for var in vars:
-        if os.environ.get(var) is None or os.environ.get(var) == "":
+        if os.getenv(var) is None or os.getenv(var) == "":
             raise EnvironmentVariableNotSetError(f"Environment variable '{var}' is not set.")
 
-def get_openai_clients() -> tuple[AzureChatOpenAI, AzureOpenAIEmbeddings]:
-    required_vars = [
-        "OPENAI_API_VERSION",
-        "AZURE_OPENAI_DEPLOYMENT",
-        "OPENAI_API_KEY",
-        "AZURE_OPENAI_KEY",
-        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
-        "AZURE_OPENAI_ENDPOINT"
-    ]
+def create_llm_client(config):
+    provider = config['provider']
+    validate_env_vars(config['required_vars'])
     
-    validate_env_vars(*required_vars)
+    if provider == 'groq':
+        return ChatGroq(
+            model=os.getenv("GROQ_MODEL_NAME"),
+            api_key=os.getenv("GROQ_API_KEY"),
+            streaming=config.get('stream', True),
+            max_tokens=config.get('max_tokens', 8192),
+            model_name=os.getenv('GROQ_MODEL_NAME'),
+        )
+    elif provider == 'azure_openai':
+        return AzureChatOpenAI(
+            temperature=config.get('temperature', 0),
+            openai_api_version=os.getenv("OPENAI_API_VERSION"),
+            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            api_key=os.environ["AZURE_OPENAI_KEY"],
+            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        )
+    # Add more LLM providers here as needed
+    else:
+        raise ValueError(f"Unsupported LLM provider: {provider}")
 
-    azure_llm: AzureChatOpenAI = AzureChatOpenAI(
-        temperature=0,
-        openai_api_version=os.environ.get("OPENAI_API_VERSION"),
-        azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
-        api_key=os.environ.get("AZURE_OPENAI_KEY")
-    )
-    azure_embeddings: AzureOpenAIEmbeddings = AzureOpenAIEmbeddings(
-        azure_deployment=os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"),
-        openai_api_version=os.environ.get("OPENAI_API_VERSION"),
-        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-    )
-    return azure_llm, azure_embeddings
-
-def get_embedchain_settings(task_id: str) -> dict:
-    required_vars = [
-        "AZURE_OPENAI_LLM_DEPLOYMENT_NAME",
-        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
-    ]
+def create_embedder_client(config):
+    provider = config['provider']
     
-    validate_env_vars(*required_vars)
+    if provider == 'gpt4all':
+        return GPT4AllEmbeddings(provider="gpt4all")
+    elif provider == 'azure_openai':
+        validate_env_vars(config['required_vars'])
+        return AzureOpenAIEmbeddings(
+            azure_deployment=os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"],
+            openai_api_version=os.environ["OPENAI_API_VERSION"],
+            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+            api_key=os.environ["AZURE_OPENAI_API_KEY"],
+        )
+    # Add more embedder providers here as needed
+    else:
+        raise ValueError(f"Unsupported embedder provider: {provider}")
+
+def get_clients(llm_name: str, embedder_name: str):
+    llm_config_path = Path('config') / 'llms' / f'{llm_name}.json'
+    embedder_config_path = Path('config') / 'embedders' / f'{embedder_name}.json'
+    
+    llm_config = load_config(llm_config_path)
+    embedder_config = load_config(embedder_config_path)
+    
+    llm_client = create_llm_client(llm_config)
+    embedder_client = create_embedder_client(embedder_config)
+    
+    return llm_client, embedder_client
+
+def load_config(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)
+
+def get_embedchain_settings(task_id: str, llm_name: str, embedder_name: str) -> dict:
+    llm_config_path = Path('config') / 'llms' / f'{llm_name}.json'
+    embedder_config_path = Path('config') / 'embedders' / f'{embedder_name}.json'
+    
+    llm_config = load_config(llm_config_path)
+    embedder_config = load_config(embedder_config_path)
+    llm_config['config']['api_key'] = os.getenv('AZURE_OPENAI_API_KEY')
+    llm_config['config']['deployment_name'] = os.getenv('AZURE_OPENAI_LLM_DEPLOYMENT_NAME')
+
+    embedder_config['config']['api_key'] = os.getenv('AZURE_OPENAI_API_KEY')
+    embedder_config['config']['deployment_name'] = os.getenv('AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME')
 
     return {
         'llm': {
-            'provider': 'azure_openai',
-            'config': {
-                'model': 'gpt-4', # TBD: set from env variable
-                'deployment_name': os.environ.get("AZURE_OPENAI_LLM_DEPLOYMENT_NAME"),
-                'temperature': 0.5,
-                'max_tokens': 1000,
-                'top_p': 1,
-                'stream': False,
-            },
+            'provider': llm_config['provider'],
+            'config': llm_config['config'],
         },
         'embedder': {
-            'provider': 'azure_openai',
-            'config': {
-                'model': 'text-embedding-ada-002', # TBD: set from env variable
-                'deployment_name': os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"),
-            },
+            'provider': embedder_config['provider'],
+            'config': embedder_config['config'],
         },
         'app': {
             'config': {

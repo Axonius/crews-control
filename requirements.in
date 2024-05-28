@@ -10,4 +10,5 @@ rich
 sentence-transformers
 jira
 greenlet!=0.4.17
-setuptools==70.0.0
+langchain-groq
+gpt4all

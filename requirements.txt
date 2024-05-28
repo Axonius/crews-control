@@ -101,6 +101,7 @@ anyio==4.3.0 \
     --hash=sha256:048e05d0f6caeed70d731f3db756d35dcc1f35747c8c403364a8332c630441b8 \
     --hash=sha256:f75253795a87df48568485fd18cdd2a3fa5c4f7c5be8e5e36637733fce06fed6
     # via
+    #   groq
     #   httpx
     #   openai
     #   starlette
@@ -539,7 +540,9 @@ deprecation==2.1.0 \
 distro==1.9.0 \
     --hash=sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed \
     --hash=sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2
-    # via openai
+    # via
+    #   groq
+    #   openai
 docstring-parser==0.15 \
     --hash=sha256:48ddc093e8b1865899956fcc03b03e66bb7240c310fac5af81814580c55bf682 \
     --hash=sha256:d1679b86250d269d06a99670924d6bce45adc00b08069dae8c47d98e89b667a9
@@ -799,6 +802,11 @@ googleapis-common-protos[grpc]==1.63.0 \
     #   grpcio-status
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
+gpt4all==2.6.0 \
+    --hash=sha256:2d750cf20a3dbfd9ed0ffbd780161eb2720ae923130e8a259e9dcc9a9b108983 \
+    --hash=sha256:506a0e0089044e36e0a0792cd7abba0e2f688669101bc927b8bae4f82409dcec \
+    --hash=sha256:997c40a4c9ef639eef74861d9eb731e80be29ac8a455b2530df98fdeded6557f
+    # via -r requirements.in
 gptcache==0.1.43 \
     --hash=sha256:9c557ec9cc14428942a0ebf1c838520dc6d2be801d67bb6964807043fc2feaf5 \
     --hash=sha256:cebe7ec5e32a3347bf839e933a34e67c7fcae620deaa7cb8c6d7d276c8686f1a
@@ -863,6 +871,10 @@ greenlet==3.0.3 \
     --hash=sha256:fd096eb7ffef17c456cfa587523c5f92321ae02427ff955bebe9e3c63bc9f0da \
     --hash=sha256:fe754d231288e1e64323cfad462fcee8f0288654c10bdf4f603a39ed923bef33
     # via -r requirements.in
+groq==0.8.0 \
+    --hash=sha256:37ceb2f706bd516d0bfcac8e89048a24b375172987a0d6bd9efb521c54f6deff \
+    --hash=sha256:f5e4e892d45001241a930db451e633ca1f0007e3f749deaa5d7360062fcd61e3
+    # via langchain-groq
 grpc-google-iam-v1==0.13.0 \
     --hash=sha256:53902e2af7de8df8c1bd91373d9be55b0743ec267a7428ea638db3775becae89 \
     --hash=sha256:fad318608b9e093258fbf12529180f400d1c44453698a33509cc6ecf005b294e
@@ -977,7 +989,9 @@ httptools==0.6.1 \
 httpx==0.27.0 \
     --hash=sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5 \
     --hash=sha256:a0cb88a46f32dc874e04ee956e4c2764aba2aa228f650b06788ba6bda2962ab5
-    # via openai
+    # via
+    #   groq
+    #   openai
 huggingface-hub==0.23.1 \
     --hash=sha256:4f62dbf6ae94f400c6d3419485e52bce510591432a5248a65d0cb72e4d479eb4 \
     --hash=sha256:720a5bffd2b1b449deb793da8b0df7a9390a7e238534d5a08c9fbcdecb1dd3cb
@@ -1063,8 +1077,13 @@ langchain-core==0.1.52 \
     # via
     #   langchain
     #   langchain-community
+    #   langchain-groq
     #   langchain-openai
     #   langchain-text-splitters
+langchain-groq==0.1.4 \
+    --hash=sha256:83fa9252eb841dc29e7c0b77c5374fa26383b909c2e87eb54824ff0f9529f173 \
+    --hash=sha256:eb7e517cfcb245b0b598f93c1e87cc15100e336eb0c1b930c43e7a19dbe131d6
+    # via -r requirements.in
 langchain-openai==0.0.5 \
     --hash=sha256:93b37dfac274adad65e46d5d6e71411e00c6984bcc5e10f1d6bb58e7944dc01b \
     --hash=sha256:f317fee5b652949ad96ad7edf8ef7a044a6a3f0cc71d1e12f9d5261789fd68c4
@@ -1854,6 +1873,7 @@ pydantic==2.7.1 \
     #   crewai-tools
     #   fastapi
     #   google-cloud-aiplatform
+    #   groq
     #   instructor
     #   lancedb
     #   langchain
@@ -2205,6 +2225,7 @@ requests==2.32.2 \
     #   google-api-core
     #   google-cloud-bigquery
     #   google-cloud-storage
+    #   gpt4all
     #   gptcache
     #   huggingface-hub
     #   jira
@@ -2479,6 +2500,7 @@ sniffio==1.3.1 \
     --hash=sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc
     # via
     #   anyio
+    #   groq
     #   httpx
     #   openai
     #   trio
@@ -2739,6 +2761,7 @@ tqdm==4.66.4 \
     --hash=sha256:e4d936c9de8727928f3be6079590e97d9abfe8d39a590be678eb5919ffc186bb
     # via
     #   chromadb
+    #   gpt4all
     #   huggingface-hub
     #   lancedb
     #   openai
@@ -2771,6 +2794,7 @@ typing-extensions==4.11.0 \
     #   alembic
     #   chromadb
     #   fastapi
+    #   groq
     #   huggingface-hub
     #   jira
     #   openai

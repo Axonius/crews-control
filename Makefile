@@ -1,15 +1,21 @@
-BUILD		= build
-RUN			= run
-RUN_IT		= run_it
-CLEAN		= clean
-TEST		= test
-BENCHMARK	= benchmark
-COMPILE_REQUIREMENTS = compile-requirements
+BUILD					= build
+RUN						= run
+RUN_IT					= run_it
+CLEAN					= clean
+TEST					= test
+BENCHMARK				= benchmark
+COMPILE_REQUIREMENTS	= compile-requirements
+DEV						= dev
 
-all: $(COMPILE_REQUIREMENTS) $(BUILD) $(RUN_IT)
+it: $(COMPILE_REQUIREMENTS) $(BUILD) $(RUN_IT)
+
+$(DEV):
+	pip install -r requirements-dev.txt
+	pip-licenses -a -f markdown --output LICENSES.md
 
 $(COMPILE_REQUIREMENTS):
 	pip install pip-tools
+	pip-compile --generate-hashes requirements-dev.in
 	pip-compile --generate-hashes requirements.in
 
 $(BUILD):
@@ -57,4 +63,4 @@ $(TEST):
 	make $(BUILD)
 	docker run -it --env-file .env -v $(PWD)/db:/app/db crews_control pytest execution/tests/ -vvv
 
-.PHONY: all $(BUILD) $(RUN) $(RUN_IT) $(CLEAN) $(TEST) $(BENCHMARK) $(COMPILE_REQUIREMENTS)
+.PHONY: it $(DEBV) $(BUILD) $(RUN) $(RUN_IT) $(CLEAN) $(TEST) $(BENCHMARK) $(COMPILE_REQUIREMENTS)

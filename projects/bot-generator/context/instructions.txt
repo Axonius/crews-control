@@ -2,9 +2,8 @@
 - Ensure that the `execution.yaml` file is according to the structure of the provided example.
 - You need to decide on how many crews (could be 1 or more), how many agents in each crew, and the tasks for each agent.
 - You need to decide on the tools required for each agent and the tasks.
-- Available tools are [serper, youtube, human, website_search, github] - you can choose any combination of these tools.
+- Available tools are [serper, human, website_search, github] - you can choose any combination of these tools.
 - - serper: is used to search the internet for information.
-- - youtube: is used to search a Youtube Channels content.
 - - human: is used to engage with a human for information.
 - - website_search: is used to search in a specific website.
 - - github: is used to search in a specific github repository.
