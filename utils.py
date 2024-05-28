@@ -94,11 +94,13 @@ def get_embedchain_settings(task_id: str, llm_name: str, embedder_name: str) -> 
     
     llm_config = load_config(llm_config_path)
     embedder_config = load_config(embedder_config_path)
-    llm_config['config']['api_key'] = os.getenv('AZURE_OPENAI_API_KEY')
-    llm_config['config']['deployment_name'] = os.getenv('AZURE_OPENAI_LLM_DEPLOYMENT_NAME')
 
-    embedder_config['config']['api_key'] = os.getenv('AZURE_OPENAI_API_KEY')
-    embedder_config['config']['deployment_name'] = os.getenv('AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME')
+    if llm_name == 'azure_openai':
+        llm, embedder = get_clients(llm_name=llm_name, embedder_name=embedder_name)
+        llm_config['config']['deployment_name'] = getattr(llm, 'deployment_name')
+        llm_config['config']['api_key'] = getattr(llm, 'openai_api_key')
+        embedder_config['config']['deployment_name'] = getattr(embedder, 'deployment')
+        embedder_config['config']['api_key'] = getattr(embedder, 'openai_api_key')
 
     return {
         'llm': {
