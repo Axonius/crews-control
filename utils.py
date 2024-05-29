@@ -70,6 +70,9 @@ def create_embedder_client(config):
             api_key=os.environ["AZURE_OPENAI_API_KEY"],
         )
     elif provider == 'huggingface':
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning, message="`resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.")
+
         return HuggingFaceEmbeddings(
             model_name=config['config']['model'],
         )
