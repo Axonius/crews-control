@@ -10,42 +10,37 @@ from execution.orchestrator import execute_crews, get_execution_config
 from models import RuntimeSettings
 from pathlib import Path
 from execution.consts import EXECUTION_CONFIG_PATH
-from utils import EnvironmentVariableNotSetError
-from utils import is_safe_path
+from utils import EnvironmentVariableNotSetError, is_safe_path
 
-def main():
-    class KeyValueAction(argparse.Action):
-        def __call__(self, parser, namespace, values, option_string=None):
-            setattr(namespace, self.dest, {})
-            for value in values:
-                key, value = value.split('=')
-                getattr(namespace, self.dest)[key] = value
+class KeyValueAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, {})
+        for value in values:
+            key, value = value.split('=')
+            getattr(namespace, self.dest)[key] = value
 
+def parse_arguments():
     parser = argparse.ArgumentParser("crews_control")
-    parser.add_argument("--project-name", required=True, help="The name of the project to run.", type=str)
-
-    group = parser.add_mutually_exclusive_group()
-
+    
+    group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--list-tools", help="List available tools", action="store_true")
     group.add_argument("--list-models", help="List available models", action="store_true")
     group.add_argument("--list-projects", help="List available projects", action="store_true")
-
-    group.add_argument(
-        "--benchmark",
-        help="Run the project from benchmark file (`benchmark.yml`)",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--ignore-cache",
-        help="Ignore the cache and run all crews",
-        action="store_true",
-    )
-
-    group.add_argument('--params', nargs='+', action=KeyValueAction,
-        help='List of key=value pairs')
-
+    group.add_argument("--benchmark", help="Run the project from benchmark file (`benchmark.yml`)", action="store_true")
+    
+    parser.add_argument("--project-name", help="The name of the project to run.", type=str)
+    parser.add_argument("--ignore-cache", help="Ignore the cache and run all crews", action="store_true")
+    parser.add_argument('--params', nargs='+', action=KeyValueAction, help='List of key=value pairs')
+    
     args = parser.parse_args()
+    
+    if not (args.list_tools or args.list_models or args.list_projects):
+        if not args.project_name:
+            parser.error("--project-name is required when not listing tools, models, or projects")
+    
+    return args
 
+def handle_list_arguments(args):
     if args.list_tools:
         from utils import list_tools
         list_tools()
@@ -59,101 +54,61 @@ def main():
         list_projects()
         os._exit(0)
 
-    runtime_settings: RuntimeSettings = RuntimeSettings(project_name=args.project_name,
-                                                        benchmark_mode=args.benchmark,
-                                                        ignore_cache=args.ignore_cache)
-    project_path: Path = Path.cwd() / 'projects' / runtime_settings.project_name
-    if project_path.exists():
-        try:
-            execution_config: dict = get_execution_config(project_name=runtime_settings.project_name)
-        except FileNotFoundError:
-            rich.print(
-                Padding(
-                    f"[bold red]Error: {EXECUTION_CONFIG_PATH} file not found for project {runtime_settings.project_name}[/bold red]",
-                    (2, 4),
-                    expand=True,
-                    style="bold red",
-                )
-            )
-            os._exit(1)
-    else:
-        rich.print(
-            Padding(
-                f"[bold red]Project {runtime_settings.project_name} not found[/bold red]",
-                (2, 4),
-                expand=True,
-                style="bold red",
-            )
-        )
-        os._exit(1)
+def display_error(message):
+    rich.print(Padding(f"[bold red]Error: {message}[/bold red]", (2, 4), expand=True, style="bold red"))
+    os._exit(1)
 
-    rich.print(
-        Padding(
-            f"[bold white]Welcome to {runtime_settings.project_name}™[/bold white]",
-            (2, 4),
-            expand=True,
-            style="bold white",
-        )
+def display_message(message):
+    rich.print(Padding(f"[bold white]{message}[/bold white]", (2, 4), expand=True, style="bold white"))
+
+def execute_project(runtime_settings, execution_config, user_inputs=None, validations=None):
+    validate_user_inputs(user_inputs=user_inputs or {}, execution_config=execution_config)
+    execute_crews(
+        project_name=runtime_settings.project_name,
+        user_inputs=user_inputs or get_user_inputs(execution_config),
+        validations=validations,
+        ignore_cache=runtime_settings.ignore_cache
     )
 
+def main():
+    args = parse_arguments()
+    handle_list_arguments(args)
+    
+    runtime_settings = RuntimeSettings(
+        project_name=args.project_name,
+        benchmark_mode=args.benchmark,
+        ignore_cache=args.ignore_cache
+    )
+
+    project_path = Path.cwd() / 'projects' / runtime_settings.project_name
+    if not project_path.exists():
+        display_error(f"Project {runtime_settings.project_name} not found")
+
     try:
-        # benchmark mode
+        execution_config = get_execution_config(project_name=runtime_settings.project_name)
+    except FileNotFoundError:
+        display_error(f"{EXECUTION_CONFIG_PATH} file not found for project {runtime_settings.project_name}")
+
+    display_message(f"Welcome to {runtime_settings.project_name}™")
+
+    try:
         if runtime_settings.benchmark_mode:
             from utils import report_success_percentage
-            benchmark_settings: dict = runtime_settings.load_benchmark_file()
+            benchmark_settings = runtime_settings.load_benchmark_file()
             for index, execution in enumerate(benchmark_settings.get('executions') or []):
                 rich.print(f"[grey]Running benchmark execution: <{index}>[/grey]")
-                user_inputs: dict = execution.get('user_inputs') or {}
-                validations: dict = execution.get('validations') or {}
-                validate_user_inputs(user_inputs=user_inputs,
-                                    execution_config=execution_config)
-                execute_crews(project_name=runtime_settings.project_name,
-                            user_inputs=user_inputs,
-                            validations=validations,
-                            ignore_cache=runtime_settings.ignore_cache)
-        # params mode
+                execute_project(runtime_settings, execution_config, execution.get('user_inputs'), execution.get('validations'))
         elif args.params:
-            user_inputs = {}
-            for key, value in args.params.items():
-                user_inputs[key] = value
-            validate_user_inputs(user_inputs=user_inputs,
-                                 execution_config=execution_config)
-            execute_crews(project_name=runtime_settings.project_name,
-                          user_inputs=user_inputs,
-                          ignore_cache=runtime_settings.ignore_cache)
-
-        # normal mode
+            execute_project(runtime_settings, execution_config, args.params)
         else:
-            execute_crews(project_name=runtime_settings.project_name,
-                        user_inputs=get_user_inputs(execution_config))
-    except FileNotFoundError as e:
-        rich.print(
-            Padding(
-                f"[bold red]Error: {str(e)}[/bold red]",
-                (2, 4),
-                expand=True,
-                style="bold red",
-            )
-        )
-        os._exit(1)
-    except EnvironmentVariableNotSetError as e:
-        rich.print(
-            Padding(
-                f"[bold red]Error: {str(e)}[/bold red]",
-                (2, 4),
-                expand=True,
-                style="bold red",
-            )
-        )
-        os._exit(1)
+            execute_project(runtime_settings, execution_config)
+    except (FileNotFoundError, EnvironmentVariableNotSetError) as e:
+        display_error(str(e))
 
     if runtime_settings.benchmark_mode:
         if not is_safe_path(Path.cwd() / 'projects', Path.cwd() / 'projects' / runtime_settings.project_name / 'validations'):
-            rich.print(
-                f"[bold red]Error: Path traversal detected in project name {runtime_settings.project_name}[/bold red]"
-            )
-            os._exit(1)
-
+            display_error(f"Path traversal detected in project name {runtime_settings.project_name}")
+        
         report_success_percentage(f"projects/{runtime_settings.project_name}/validations")
 
 if __name__ == "__main__":
