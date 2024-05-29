@@ -26,6 +26,10 @@ def main():
 
     group = parser.add_mutually_exclusive_group()
 
+    group.add_argument("--list-tools", help="List available tools", action="store_true")
+    group.add_argument("--list-models", help="List available models", action="store_true")
+    group.add_argument("--list-projects", help="List available projects", action="store_true")
+
     group.add_argument(
         "--benchmark",
         help="Run the project from benchmark file (`benchmark.yml`)",
@@ -41,6 +45,20 @@ def main():
         help='List of key=value pairs')
 
     args = parser.parse_args()
+
+    if args.list_tools:
+        from utils import list_tools
+        list_tools()
+        os._exit(0)
+    elif args.list_models:
+        from utils import list_models
+        list_models()
+        os._exit(0)
+    elif args.list_projects:
+        from utils import list_projects
+        list_projects()
+        os._exit(0)
+
     runtime_settings: RuntimeSettings = RuntimeSettings(project_name=args.project_name,
                                                         benchmark_mode=args.benchmark,
                                                         ignore_cache=args.ignore_cache)

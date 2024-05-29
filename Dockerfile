@@ -7,8 +7,22 @@ WORKDIR /app
 # Copy only the requirements file, to cache the installed packages layer
 COPY requirements.txt /app/
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --require-hashes --no-cache-dir -r requirements.txt
+# Install system dependencies for building packages (if any needed)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install dependencies with retries
+RUN pip install --upgrade pip setuptools \
+    && pip install --require-hashes --no-cache-dir -r requirements.txt --verbose
+# Suggested retry mechanism for pip install (commented out)
+# RUN pip install --upgrade pip setuptools && \
+#     pip install --require-hashes --no-cache-dir -r requirements.txt || \
+#     pip install --require-hashes --no-cache-dir -r requirements.txt
+
 
 # Invalidate cache from here onwards when needed
 ARG CACHEBUSTER=1

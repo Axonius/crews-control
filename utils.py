@@ -6,6 +6,7 @@ from langchain_community.embeddings import GPT4AllEmbeddings
 import json
 from pathlib import Path
 import re
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 class EnvironmentVariableNotSetError(Exception):
     pass
@@ -68,6 +69,11 @@ def create_embedder_client(config):
             azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
             api_key=os.environ["AZURE_OPENAI_API_KEY"],
         )
+    elif provider == 'huggingface':
+        return HuggingFaceEmbeddings(
+            model_name=config['config']['model'],
+        )
+
     # Add more embedder providers here as needed
     else:
         raise ValueError(f"Unsupported embedder provider: {provider}")
@@ -177,3 +183,42 @@ def report_success_percentage(folder_path):
                 print(f"  {failure}")
     else:
         print("All files succeeded!")
+
+def list_models():
+    def list_model_files(directory, model_type):
+        print("-" * 30)
+        print(f"Available {model_type} models:")
+        print("-" * 30)
+        path = Path('config') / directory
+        if not path.exists():
+            print(f"The directory {path} does not exist.")
+            return
+
+        for file in path.glob('*.json'):
+            print(f'- {file.stem}')
+        print()
+
+    list_model_files('llms', 'LLM')
+    list_model_files('embedders', 'Embedder')
+
+def list_tools():
+    print("-" * 30)
+    print("Available tools:")
+    print("-" * 30)
+    from tools.index import _TOOLS_MAP
+    for tool_name in _TOOLS_MAP.keys():
+        print(f'- {tool_name}')
+
+def list_projects():
+    print("-" * 30)
+    print("Available projects:")
+    print("-" * 30)
+    path = Path('projects')
+    if not path.exists():
+        print(f"The directory {path} does not exist.")
+        return
+
+    for project in path.iterdir():
+        if project.is_dir():
+            print(f'- {project.name}')
+    print()

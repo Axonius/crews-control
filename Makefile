@@ -6,8 +6,16 @@ TEST					= test
 BENCHMARK				= benchmark
 COMPILE_REQUIREMENTS	= compile-requirements
 DEV						= dev
+LIST_TOOLS				= list-tools
+LIST_MODELS				= list-models
 
 it: $(COMPILE_REQUIREMENTS) $(BUILD) $(RUN_IT)
+
+$(LIST_TOOLS):
+	docker run -it --env-file .env crews_control python main.py --list-tools
+
+$(LIST_MODELS):
+	docker run -it --env-file .env crews_control python main.py --list-models
 
 $(DEV):
 	pip install -r requirements-dev.txt
@@ -20,6 +28,8 @@ $(COMPILE_REQUIREMENTS):
 
 $(BUILD):
 	mkdir -p db
+	pip install --upgrade pip
+	pip install --upgrade setuptools
 	docker build . -t crews_control --build-arg CACHEBUSTER=$$(date +%s)
 
 $(RUN_IT):
