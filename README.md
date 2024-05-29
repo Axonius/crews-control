@@ -200,7 +200,69 @@ crews:
           {user_input_2}, {optional_user_input_3} and {some_agent} here.
 ```
 
-TBD - continue documentation
+
+### Project structure
+### Project Folder Structure
+
+#### Required Files and Folders
+
+1. **execution.yaml**: 
+   - **Purpose**: This is the main configuration file for the project.
+   - **Contents**:
+     - **Required User Inputs**: Specifies the inputs that users need to provide for the execution of the project.
+     - **Context File References**: References to any context files needed for the execution.
+   - **Context Subfolder**:
+     - If there are references to context files in the execution.yaml, these files should be placed in a subfolder named `context`.
+
+2. **benchmark.yaml** (Optional):
+   - **Purpose**: Used for batch processing and validation of the project.
+   - **Contents**:
+     - **User Input Values**: Specifies multiple runs with various user inputs. Each run includes a set of user inputs.
+     - **Validations**: Includes validation details for one or more crews within the project. 
+       - **Metrics**: For each crew, one or more metrics are provided to compare the crew's output against the expected output. 
+       - **Expected Output**: This can be provided either inline within the benchmark.yaml or as a reference to a file in the `validations` subfolder.
+       - **Validation Results**: The result of each validation (either success or failure) is provided as a JSON string. In case of failure, the reason is included.
+
+#### Subfolders
+
+1. **context**:
+   - Contains context files referenced in the execution.yaml.
+
+2. **validations**:
+   - Contains expected output files referenced in the benchmark.yaml.
+   - Stores the JSON output of each validation with a `.result` extension.
+
+#### Example Structure
+
+```plaintext
+project-folder/
+├── execution.yaml
+├── benchmark.yaml (optional)
+├── context/ (only if context files are referenced)
+│   ├── context-file1
+│   └── context-file2
+└── validations/ (only if validations are included)
+    ├── expected-output1 (if expected output is given as a filename reference)
+    ├── expected-output2
+    ├── validation1.result (JSON output of validation)
+    └── validation2.result
+```
+
+### Running a project
+
+#### Interactive mode
+
+#### CLI mode
+
+#### Batch mode with benchmarking
+
+### Development
+
+#### Building
+
+#### Compiling requirements
+
+#### Creating tools
 
 ## Compliance
 
