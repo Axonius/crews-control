@@ -21,23 +21,24 @@ class KeyValueAction(argparse.Action):
 
 def parse_arguments():
     parser = argparse.ArgumentParser("crews_control")
+
+    parser.add_argument("--project-name", help="The name of the project to run.", type=str)
+    parser.add_argument("--ignore-cache", help="Ignore the cache and run all crews", action="store_true")
+    parser.add_argument('--params', nargs='+', action=KeyValueAction, help='List of key=value pairs')
     
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group()
     group.add_argument("--list-tools", help="List available tools", action="store_true")
     group.add_argument("--list-models", help="List available models", action="store_true")
     group.add_argument("--list-projects", help="List available projects", action="store_true")
     group.add_argument("--benchmark", help="Run the project from benchmark file (`benchmark.yml`)", action="store_true")
     
-    parser.add_argument("--project-name", help="The name of the project to run.", type=str)
-    parser.add_argument("--ignore-cache", help="Ignore the cache and run all crews", action="store_true")
-    parser.add_argument('--params', nargs='+', action=KeyValueAction, help='List of key=value pairs')
-    
     args = parser.parse_args()
-    
+
+    # Ensure project name is provided if not listing
     if not (args.list_tools or args.list_models or args.list_projects):
         if not args.project_name:
-            parser.error("--project-name is required when not listing tools, models, or projects")
-    
+            parser.error("--project-name is required for execution and benchmark")
+
     return args
 
 def handle_list_arguments(args):
@@ -73,7 +74,7 @@ def execute_project(runtime_settings, execution_config, user_inputs=None, valida
 def main():
     args = parse_arguments()
     handle_list_arguments(args)
-    
+
     runtime_settings = RuntimeSettings(
         project_name=args.project_name,
         benchmark_mode=args.benchmark,
@@ -99,9 +100,12 @@ def main():
                 rich.print(f"[grey]Running benchmark execution: <{index}>[/grey]")
                 execute_project(runtime_settings, execution_config, execution.get('user_inputs'), execution.get('validations'))
         elif args.params:
-            execute_project(runtime_settings, execution_config, args.params)
+            user_inputs = {k: v for k, v in args.params.items()}
+            execute_project(runtime_settings, execution_config, user_inputs)
         else:
-            execute_project(runtime_settings, execution_config)
+            # Interactive mode: get user inputs interactively
+            user_inputs = get_user_inputs(execution_config)
+            execute_project(runtime_settings, execution_config, user_inputs)
     except (FileNotFoundError, EnvironmentVariableNotSetError) as e:
         display_error(str(e))
 
