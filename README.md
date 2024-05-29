@@ -264,6 +264,8 @@ project-folder/
 
 #### Creating tools
 
+### Supported LLMs and Embedders
+
 ## Compliance
 
 By using the dependencies listed in `requirements.txt`, you agree to comply with the terms of the GPL for those dependencies. This means that:
