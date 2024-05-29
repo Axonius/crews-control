@@ -15,7 +15,7 @@ user_inputs:
 
 crews:
   industry_analysis_crew:
-    output_naming_template: 'industry-analysis-report.md'
+    output_naming_template: '{company_name}-industry-analysis-report.md'
     agents:
       research_agent:
         role: "Research Analyst"
@@ -32,6 +32,12 @@ crews:
       industry_analysis_task:
         agent: research_agent
         description: >
+          IMPORTANT INSTRUCTIONS:
+          -----------------------
+          - The following is *NEVER* okay to do: "Action: None", "Action Input: None".
+          - If you should provide a final answer, you *MUST* follow the correct "Thought: I now can give a great answer",
+           "Final Answer:" format.
+
           Conduct an in-depth analysis of the industry related to the company's domain: "{company_domain}".
 
           Investigate current trends, challenges, and opportunities within the industry, utilizing market
@@ -53,7 +59,7 @@ crews:
           attractive choice for potential candidates.
 
   research_company_culture_crew:
-    output_naming_template: 'company-culture-report.md'
+    output_naming_template: '{company_name}-company-culture-report.md'
     agents:
       research_agent:
         role: "Research Analyst"
@@ -83,7 +89,7 @@ crews:
           posting should be included.
 
   research_role_requirements_crew:
-    output_naming_template: 'role-requirements-list.md'
+    output_naming_template: '{company_name}-{sha256:hiring_needs}-role-requirements-list.md'
     agents:
       research_agent:
         role: "Research Analyst"
@@ -100,7 +106,7 @@ crews:
       research_role_requirements_task:
         agent: research_agent
         description: >
-          Based on the hiring manager's needs: "{hiring_needs}", identify the key skills, experiences, and
+          Based on the hiring manager's needs: "{sha256:hiring_needs}", identify the key skills, experiences, and
           qualities the ideal candidate should possess for the role.
 
           Consider the company's current projects,
@@ -113,7 +119,7 @@ crews:
           company's culture, ongoing projects, and the specific role's requirements.
 
   draft_job_posting_crew:
-    output_naming_template: 'draft-job-posting.md'
+    output_naming_template: '{company_name}-{sha256:hiring_needs}-draft-job-posting.md'
     agents:
       writer_agent:
         role: "Job Description Writer"
@@ -147,7 +153,7 @@ crews:
           aimed at attracting the right candidates.
 
   review_and_edit_job_posting_crew:
-    output_naming_template: 'final-job-posting.md'
+    output_naming_template: '{company_name}-{sha256:hiring_needs}-final-job-posting.md'
     agents:
       review_agent:
         role: "Review and Editing Specialist"

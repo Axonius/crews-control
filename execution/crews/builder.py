@@ -9,6 +9,7 @@ from execution.contexts import load_crew_contexts
 from execution.consts import EXIT_ON_ERROR
 from tools.index import get_tool
 from utils import is_safe_path
+import re
 
 class NoAgentFoundError(Exception):
     pass
@@ -47,7 +48,6 @@ class CrewRunner:
 
         # output file
         self._should_export_results: bool = should_export_results
-        self._output_file: str = self._evaluate_input(self._crew_config.get('output_naming_template') or '').replace('/', '-')
 
         # validate results
         self._validate_results: str = self._evaluate_input(crew_config.get('validate_results') or '')
@@ -68,6 +68,8 @@ class CrewRunner:
 
     def _evaluate_input(self, user_input: str) -> str:
         try:
+            user_input = self._strip_sha256(user_input)
+
             return user_input.format(
                 **(self._crew_context or {}),
                 **(self._user_input or {}),
@@ -75,6 +77,40 @@ class CrewRunner:
             )
         except ValueError as e:
             raise ValueError(f'\nError evaluating input: {e}\nUser input:\n---\n{user_input}\n---\n')
+
+    def _strip_sha256(self, user_input: str) -> str:
+        sha256_pattern = re.compile(r'\{sha256:(\w+)\}')
+        return sha256_pattern.sub(r'{\1}', user_input)
+
+    def _replace_sha256(self, user_input: str) -> str:
+        # Define a regex pattern to find {sha256:(\w+)}
+        sha256_pattern = re.compile(r'\{sha256:(\w+)\}')
+        
+        def replace_match(match):
+            var_name = match.group(1)
+            # Get the variable value from the context
+            var_value = (self._crew_context or {}).get(var_name) or \
+                        (self._user_input or {}).get(var_name) or \
+                        (self._previous_results or {}).get(var_name)
+            if var_value is None:
+                raise ValueError(f"Variable '{var_name}' not found in context for SHA-256 hashing.")
+            # Compute SHA-256 hash
+            hash_object = hashlib.sha256(var_value.encode())
+            return hash_object.hexdigest()
+        
+        # Replace {sha256:<variable>} patterns with their SHA-256 hash
+        return sha256_pattern.sub(replace_match, user_input)
+
+    def _evaluate_for_output_file(self, user_input: str) -> str:
+        # First, handle SHA-256 replacements
+        user_input = self._replace_sha256(user_input)
+        # Then, perform regular formatting
+        return self._evaluate_input(user_input)
+
+    @property
+    def _output_file(self) -> str:
+        # Automatically evaluate when accessing the _output_file property
+        return self._evaluate_for_output_file(self._crew_config.get('output_naming_template') or '').replace('/', '-')
 
     def _get_tool_id(self, scope: typing.Optional[str] = None) -> str:
         if scope is None:
