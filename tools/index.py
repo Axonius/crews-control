@@ -15,6 +15,8 @@ from tools.custom.create_jira_issue import JiraTicketCreationTool
 from tools.custom.website_search_tool import WebsiteContentQueryTool
 from tools.custom.human import HumanTool
 from tools.custom.website_search_tool import WebsiteContentQueryTool
+from tools.custom.git_search_tool import GitSearchTool
+from tools.custom.fetch_file_content_tool import GitFileContentQueryTool
 from embedchain import App
 
 from langchain.agents import load_tools
@@ -41,6 +43,8 @@ _TOOLS_MAP: dict[str, Callable] = {
     'fetch_pr_content': lambda: GitHubPRDetailsTool(),
     'FindMethodImplementationTool': lambda: FindMethodImplementationTool(),
     'create_issue': lambda: JiraTicketCreationTool(),
+    'git_search': lambda: GitSearchTool('<path-to-git-folder>'), # set the path to the git folder
+    'fetch_file_content': lambda: GitFileContentQueryTool('<path-to-git-folder>'), # set the path to the git folder
 }
 
 required_vars = [

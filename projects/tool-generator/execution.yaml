@@ -14,7 +14,7 @@ crews:
         goal: "To create a function based on the provided human request."
         tools:
           - human
-          - website_search_tool
+          - website_search
         backstory: >
           You are an experienced Software Engineer with a strong background in Python programming.
           You can create functions based on the provided requirements and are skilled in problem-solving
@@ -52,6 +52,8 @@ crews:
       software_engineer:
         role: "Software Engineer"
         goal: "To create a tool based on the provided Python function."
+        tools:
+          - human
         backstory: >
           Based on the provided Python function, you are tasked with creating a tool that follows the structure of the example tool in the provided context.
 
@@ -59,6 +61,7 @@ crews:
       create_tool:
         agent: software_engineer
         description: >
+          Ask the human to provide any special requirements for the tool.
           Create a tool based on the provided function.
           The tool should follow the structure of the example tool in the provided context.
           Ensure that all functions have proper docstrings and comments.

@@ -1,63 +1,53 @@
-from crewai_tools import BaseTool
-from github import Github, GithubException
 import os
-import time
-import ast
+from crewai_tools import BaseTool
+from utils import get_embedchain_settings
+from embedchain import App
+from typing import Optional
 
-
-class GitHubSearchTool(BaseTool):
-    """A tool that searches for code snippets in a GitHub repository."""
-    name: str = "GitHubSearchTool"
+class WebsiteContentQueryTool(BaseTool):
+    """A tool that fetches website content, adds it to a vector database, and queries it."""
+    name: str = "WebsiteContentQueryTool"
+    app: Optional[App] = None
     description: str = (
-        "You use this tool to search for code snippets in a GitHub repository. The tool uses the github rest API. If you need to search for" \
-        "code in a specific file in a known path, you can use the following query: 'path:/path/to/ filename:file.py search_query'."
-        )
-    
-    def __init__(self, **kwargs):
+        "This tool fetches the content of a website, adds it to a vector database, and queries the vector database for a given query string."
+    )
+    class Config:
+        arbitrary_types_allowed = True
+
+    def __init__(self, app: 'App', **kwargs):
         super().__init__(**kwargs)
-    
-    def _run(self, repo_name: str, search_query: str) -> str:
-        """Use the GitHubSearchTool."""
-        gh = Github(os.getenv('GITHUB_TOKEN'))
-        query = f'{search_query} repo:{repo_name}'
-        return self.execute_search(query=query, gh=gh)
-    
-    def execute_search(self, gh: Github, query: str) -> str:
+        if app and isinstance(app, App):
+            self.app = app
+
+    def _run(self, url: str, query: str) -> str:
+        """Use the WebsiteContentQueryTool."""
+        return self.query_website_content(url=url, query=query)
+
+    def query_website_content(self, url: str, query: str) -> str:
+        """
+        Fetches the content of a website, adds it to a vector database, and queries the vector database for a given query string.
+
+        Parameters:
+        url (str): The URL of the website to fetch content from.
+        query (str): The query string to search in the vector database.
+
+        Returns:
+        str: The result from the vector database query.
+
+        Raises:
+        Exception: If there is an issue with fetching website content or querying the vector database.
+        """
+        # Fetch the content of the website
         try:
-            search_result = gh.search_code(query)
-            code_results = []
-            if search_result.totalCount > 10:
-                error_message = 'Too many results. Please narrow down the search. Returning without file content.'
-            for item in search_result:
-                file_content = item.decoded_content.decode('utf-8')
-                if item.path.endswith('.py'):
-                    classes, methods = self.parse_python_code(file_content)
-                else:
-                    classes, methods = [], []
-                code_results.append({'filename': item.path,
-                                     'content': file_content if search_result.totalCount <= 10 else error_message,
-                                     'classes': classes,
-                                     'methods': methods})
-            return str(code_results)
-        except GithubException as e:
-            if e.status == 403 and 'rate limit' in e.data['message'].lower():
-                print("Rate limit exceeded. Handling...")
-                return self.handle_rate_limit(gh=gh, query=query)
-            else:
-                raise
+            if not self.app:
+                config = get_embedchain_settings(task_id='shared',
+                                                 llm_name=os.getenv('LLM_NAME'),
+                                                 embedder_name=os.getenv('EMBEDDER_NAME'))
+                self.app = App.from_config(config=config)
+            self.app.add(url, data_type='web_page')
+            results = self.app.query(query)
+        except Exception as e:
+            raise Exception(f"Failed to fetch website content: {e}")
 
-    def parse_python_code(self, code):
-        tree = ast.parse(code)
-        classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
-        methods = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
-        return classes, methods
-
-    def handle_rate_limit(self, gh: Github, query: str) -> str:
-        rate_limit = gh.get_rate_limit()
-        reset_time = rate_limit.core.reset
-        current_time = time.time()
-        sleep_time = reset_time - current_time + 10  # adding 10 seconds to ensure the limit is reset
-        print(f"Rate limit exceeded. Sleeping for {sleep_time} seconds.")
-        time.sleep(sleep_time)
-        print("Retrying the request...")
-        return self.execute_search(query)
+        # Return the result from the vector database
+        return str(results)

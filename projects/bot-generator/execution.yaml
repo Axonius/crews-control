@@ -11,8 +11,8 @@ crews:
   execution_yaml_generation:
     output_naming_template: '{bot_name}-execution.yaml'
     context:
-      example_execution_yaml: "execution.yaml"
       instructions_txt: "instructions.txt"
+      execution_yaml_guide: "guide.md"
 
     agents:
       software_engineer:
@@ -36,15 +36,16 @@ crews:
           {bot_description}
           -----------------
 
-          Use the provided example in the context.
+          Read thoroughly and understand the guide on how to construct an `execution.yaml` file.
+          Use the provided example `execution.yaml` file as a reference.
 
           IMPORTANT INSTRUCTIONS:
           -----------------------
           {instructions_txt}
 
-          [CONTEXT]
-          {example_execution_yaml}
-          [/CONTEXT]
+          [GUIDE]
+          {execution_yaml_guide}
+          [/GUIDE]
 
           Engage with the human to ask for any specific requirements or details needed for the `execution.yaml` file.
         expected_output: "content of the `execution.yaml` file for {bot_name}."

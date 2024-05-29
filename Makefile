@@ -8,6 +8,7 @@ COMPILE_REQUIREMENTS	= compile-requirements
 DEV						= dev
 LIST_TOOLS				= list-tools
 LIST_MODELS				= list-models
+LIST_PROJECTS			= list-projects
 
 it: $(COMPILE_REQUIREMENTS) $(BUILD) $(RUN_IT)
 
@@ -16,6 +17,9 @@ $(LIST_TOOLS):
 
 $(LIST_MODELS):
 	docker run -it --env-file .env crews_control python main.py --list-models
+
+$(LIST_PROJECTS):
+	docker run -it --env-file .env crews_control python main.py --list-projects
 
 $(DEV):
 	pip install -r requirements-dev.txt
