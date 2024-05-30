@@ -308,7 +308,13 @@ make compile-requirements
 This command uses pip-tools to generate hashed requirements files for a consistent and reproducible environment.
 
 #### Creating tools
-TBD
+Agents can be set up to use tools by listing them in the `_TOOLS_MAP` dictionary found in the [tools/index.py](tools/index.py) file.
+
+You can use the [tool-generator project](projects/tool-generator) to assist you in generating a required tool:
+
+```sh
+make run-it PROJECT_NAME=tool-generator
+```
 
 ### Supported LLMs and Embedders
 The project supports various Large Language Models (LLMs) and embedding models. To list the available models, use the following command:
