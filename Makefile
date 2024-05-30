@@ -2,7 +2,7 @@
 
 BUILD					= build
 RUN						= run
-RUN_IT					= run_it
+RUN_IT					= run-it
 BENCHMARK				= benchmark
 CLEAN					= clean
 COMPILE_REQUIREMENTS	= compile-requirements
