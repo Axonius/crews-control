@@ -1,6 +1,11 @@
 - The provided example in the context is for a specific bot. You need to customize it for {bot_name}.
 - Ensure that the `execution.yaml` file is according to the structure of the provided example.
+- If you need to reference the output of a dependant crew in another crew's task, enclose the templating variable using a unique relevant marker like so:
+  [SOME_REASONABLE_UNIQUE_MARKER]
+  {the_referenced_crew_you_want_their_output}
+  [/SOME_REASONABLE_UNIQUE_MARKER]
 - You need to decide on how many crews (could be 1 or more), how many agents in each crew, and the tasks for each agent.
+- Prefer more crews as opposed to a single crew with many tasks, as that would allow collecting intermediate outputs.
 - You need to decide on the tools required for each agent and the tasks.
 - Available tools are [serper, human, website_search, github] - you can choose any combination of these tools.
 - - serper: is used to search the internet for information.
