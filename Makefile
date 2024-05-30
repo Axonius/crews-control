@@ -37,7 +37,7 @@ help:
 	@echo "  $(COMPILE_REQUIREMENTS) - Recompile the requirements files"
 	@echo "  $(DEV)                  - Install development requirements and generate LICENSES.md"
 	@echo "  $(LIST_TOOLS)           - List available tools"
-	@echo "  $(LIST_MODELS)          - List available models"
+	@echo "  $(LIST_MODELS)          - List available LLM and Embedder models"
 	@echo "  $(LIST_PROJECTS)        - List available projects"
 	@echo "  $(CLEANUP)              - Perform Docker cleanup"
 	@echo "  $(HELP)                 - Show this help message"

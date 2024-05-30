@@ -253,20 +253,71 @@ See the [execution.yaml guide](/projects/bot-generator/context/guide.md) for det
 ### Running a project
 
 #### Interactive mode
+Interactive mode prompts the user for inputs interactively, rather than requiring them to be passed as CLI parameters or hardcoded in a configuration file. This mode is particularly useful for development or testing purposes.
+
+To start a project in interactive mode, use the following command:
+
+```sh
+make run_it PROJECT_NAME=<your_project_name>
+```
+
+Ensure you have set up the project and provided the necessary project name.
 
 #### CLI mode
+Command Line Interface (CLI) mode enables you to run the project with specific parameters, offering more control and flexibility.
+
+To run a project in CLI mode, use the following command:
+
+```sh
+make run PROJECT_NAME=<your_project_name> PARAMS="key1=value1 key2=value2"
+```
+
+Replace <your_project_name> with the name of your project and specify the required parameters.
 
 #### Batch mode with benchmarking
+Batch mode with benchmarking allows you to run multiple tests and benchmarks on your project to evaluate performance and efficiency.
+
+To run the project in batch mode with benchmarking, use:
+```sh
+make benchmark PROJECT_NAME=<your_project_name>
+```
+This mode is useful for performance testing and optimizing your project.
 
 ### Development
 
+```sh
+make dev
+```
+
+This command installs development dependencies and generates a license file for all included packages.
+
 #### Building
+To build the Docker image required for running the project, use:
+
+```sh
+make build
+```
+
+This command sets up the necessary environment and dependencies for your project.
 
 #### Compiling requirements
+```sh
+make compile-requirements
+```
+
+This command uses pip-tools to generate hashed requirements files for a consistent and reproducible environment.
 
 #### Creating tools
+TBD
 
 ### Supported LLMs and Embedders
+The project supports various Large Language Models (LLMs) and embedding models. To list the available models, use the following command:
+
+```sh
+make list-models
+```
+
+This will provide a list of supported models. Make sure to check the specific configuration and compatibility of the models with your project setup. The list of supported tools and models can be expanded as needed.
 
 ## Compliance
 
