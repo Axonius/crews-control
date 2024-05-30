@@ -200,8 +200,6 @@ crews:
           {user_input_2}, {optional_user_input_3} and {some_agent} here.
 ```
 
-
-### Project structure
 ### Project Folder Structure
 
 #### Required Files and Folders
@@ -234,7 +232,7 @@ crews:
 
 #### Example Structure
 
-```plaintext
+```plaintextmar
 project-folder/
 ├── execution.yaml
 ├── benchmark.yaml (optional)
@@ -247,8 +245,20 @@ project-folder/
     ├── validation1.result (JSON output of validation)
     └── validation2.result
 ```
+ 
+* `project-folder` is the name of the project. It resides within the [projects](projects) folder.
+* See the [execution.yaml guide](/projects/bot-generator/context/guide.md) for detailed explanation on how to create one for your project.
+* You can use the [bot-generator project](projects/bot-generator) to assist you in generating an `execution.yaml` for your project:
 
-See the [execution.yaml guide](/projects/bot-generator/context/guide.md) for detailed explanation on how to create one for your project.
+```sh
+make run-it PROJECT_NAME=bot-generator
+```
+
+And then move it to a dedicated project folder using the helper [create-project.py](create-project.py) script:
+
+```sh
+python create-project.py <projects/bot-generator/output/generated-execution.yaml> <your-project-name>
+```
 
 ### Running a project
 
