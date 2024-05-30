@@ -248,6 +248,8 @@ project-folder/
     └── validation2.result
 ```
 
+See the [execution.yaml guide](/projects/bot-generator/context/guide.md) for detailed explanation on how to create one for your project.
+
 ### Running a project
 
 #### Interactive mode
