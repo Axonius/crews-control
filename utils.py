@@ -62,6 +62,27 @@ def create_embedder_client(config):
     if provider == 'gpt4all':
         return GPT4AllEmbeddings(provider="gpt4all")
     elif provider == 'azure_openai':
+        import warnings
+        from langchain_core._api.deprecation import LangChainDeprecationWarning
+        warnings.filterwarnings(
+            "ignore",
+            category=LangChainDeprecationWarning,
+            message="The class `AzureChatOpenAI` was deprecated"
+        )
+
+        warnings.filterwarnings(
+            "ignore",
+            category=LangChainDeprecationWarning,
+            message="The class `AzureOpenAIEmbeddings` was deprecated"
+        )
+
+        warnings.filterwarnings(
+            "ignore",
+            category=LangChainDeprecationWarning,
+            message="The method `BaseChatModel.__call__` was deprecated"
+        )
+
+
         validate_env_vars(config['required_vars'])
         return AzureOpenAIEmbeddings(
             azure_deployment=os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"],
