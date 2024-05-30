@@ -130,7 +130,7 @@ make run project_name=pr-security-review PARAMS="github_repo_name='Axonius/crews
 
 ```yaml
 settings:
-  output_results: true # controls the generation of output by each crew. TBD: consider removing.
+  output_results: true
 
 user_inputs:
   user_input_1:
