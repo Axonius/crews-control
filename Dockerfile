@@ -60,3 +60,6 @@ RUN mkdir -p /home/appuser && \
 # Set the working directory and user
 WORKDIR /app
 USER appuser
+
+ENTRYPOINT [ "python", "crews_control.py" ]
+CMD []

@@ -1,4 +1,5 @@
 import rich
+from rich.pretty import Pretty
 
 def get_user_inputs(execution_config: dict) -> dict:
     """Get inputs from the user."""
@@ -34,7 +35,11 @@ def get_user_inputs(execution_config: dict) -> dict:
 
 def validate_user_inputs(user_inputs: dict, execution_config: dict):
     """Validate the user inputs."""
-    print(f'Validating user inputs: {user_inputs} with execution config: {execution_config["user_inputs"]}')
+    rich.print("Validating user inputs:")
+    rich.print(Pretty(user_inputs, indent_guides=True,expand_all=True))
+    rich.print("with execution config:")
+    rich.print(Pretty(execution_config["user_inputs"], indent_guides=True,expand_all=True))
+
     for user_input, descriptor in execution_config['user_inputs'].items():
         if not user_inputs.get(user_input):
             if not descriptor.get('optional'):
