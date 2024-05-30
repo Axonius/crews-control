@@ -53,13 +53,31 @@ $(CLEANUP):
 	@docker builder prune
 
 $(LIST_TOOLS):
-	@docker run -it --env-file .env crews_control --list-tools
+	@docker run \
+		-it \
+		--env-file .env \
+		-v $(PWD)/db:/app/db \
+		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
+		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
+		crews_control --list-tools
 
 $(LIST_MODELS):
-	@docker run -it --env-file .env crews_control --list-models
+	@docker run \
+		-it \
+		--env-file .env \
+		-v $(PWD)/db:/app/db \
+		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
+		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
+		crews_control --list-models
 
 $(LIST_PROJECTS):
-	@docker run -it --env-file .env crews_control --list-projects
+	@docker run \
+		-it \
+		--env-file .env \
+		-v $(PWD)/db:/app/db \
+		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
+		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
+		crews_control --list-projects
 
 $(DEV):
 	@pip install -r requirements-dev.txt
