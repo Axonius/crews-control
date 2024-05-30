@@ -43,8 +43,8 @@ _TOOLS_MAP: dict[str, Callable] = {
     'fetch_pr_content': lambda: GitHubPRDetailsTool(),
     'FindMethodImplementationTool': lambda: FindMethodImplementationTool(),
     'create_issue': lambda: JiraTicketCreationTool(),
-    'git_search': lambda: GitSearchTool('<path-to-git-folder>'), # set the path to the git folder
-    'fetch_file_content': lambda: GitFileContentQueryTool('<path-to-git-folder>'), # set the path to the git folder
+    'git_search': lambda: GitSearchTool(),
+    'fetch_file_content': lambda: GitFileContentQueryTool(),
 }
 
 required_vars = [
