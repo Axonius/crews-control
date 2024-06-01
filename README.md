@@ -59,7 +59,22 @@ pip install --require-hashes --no-cache-dir -r requirements.txt
 ```
 
 #### Usage
-TBD
+
+**Run a project (interactive-mode):**
+
+```bash
+make run_it project_name=<PROJECT_TO_RUN>
+```
+
+**Run a project (cli-mode):**
+```bash
+python crews_control.py --project-name=<PROJECT_TO_RUN> --params input1="value 1" input2="value 2" ... inputN="value N"
+```
+
+Example - run the `pr-security-review` project to review `PR #1` of the `Axonius/crews-control` GitHub repository:
+```bash
+python crews_control.py --project-name pr-security-review --params github_repo_name="Axonius/crews-control" pr_number="1"
+```
 
 ### Windows
 
@@ -87,7 +102,22 @@ pip install --require-hashes --no-cache-dir -r requirements.txt
 ```
 
 #### Usage
-TBD
+
+**Run a project (interactive-mode):**
+
+```bash
+make run_it project_name=<PROJECT_TO_RUN>
+```
+
+**Run a project (cli-mode):**
+```bash
+python crews_control.py --project-name=<PROJECT_TO_RUN> --params input1="value 1" input2="value 2" ... inputN="value N"
+```
+
+Example - run the `pr-security-review` project to review `PR #1` of the `Axonius/crews-control` GitHub repository:
+```bash
+python crews_control.py --project-name pr-security-review --params github_repo_name="Axonius/crews-control" pr_number="1"
+```
 
 ### Docker
 
