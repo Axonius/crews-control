@@ -57,6 +57,7 @@ $(LIST_TOOLS):
 		-it \
 		--env-file .env \
 		-v $(PWD)/db:/app/db \
+		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
 		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
 		crews_control --list-tools
@@ -66,6 +67,7 @@ $(LIST_MODELS):
 		-it \
 		--env-file .env \
 		-v $(PWD)/db:/app/db \
+		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
 		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
 		crews_control --list-models
@@ -75,6 +77,7 @@ $(LIST_PROJECTS):
 		-it \
 		--env-file .env \
 		-v $(PWD)/db:/app/db \
+		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
 		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
 		crews_control --list-projects
@@ -110,6 +113,7 @@ $(RUN_IT):
 		-it \
 		--env-file .env \
 		-v $(PWD)/db:/app/db \
+		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
 		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
 		crews_control \
@@ -141,6 +145,7 @@ $(RUN):
 	@docker run \
 		--env-file .env \
 		-v $(PWD)/db:/app/db \
+		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
 		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(PROJECT_NAME)/output \
 		crews_control \

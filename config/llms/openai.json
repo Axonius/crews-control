@@ -1,0 +1,14 @@
+{
+    "provider": "openai",
+    "required_vars": [
+        "OPENAI_API_VERSION",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL_NAME"
+    ],
+    "config": {
+        "temperature": 0.5,
+        "max_tokens": 1000,
+        "top_p": 1,
+        "stream": false
+    }
+}

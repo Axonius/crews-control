@@ -52,6 +52,13 @@ def create_llm_client(config):
             api_key=os.environ["AZURE_OPENAI_KEY"],
             azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
         )
+    elif provider == 'openai':
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            temperature=config.get('temperature', 0),
+            model=os.getenv("OPENAI_MODEL_NAME"),
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
     # Add more LLM providers here as needed
     else:
         raise ValueError(f"Unsupported LLM provider: {provider}")
@@ -69,20 +76,16 @@ def create_embedder_client(config):
             category=LangChainDeprecationWarning,
             message="The class `AzureChatOpenAI` was deprecated"
         )
-
         warnings.filterwarnings(
             "ignore",
             category=LangChainDeprecationWarning,
             message="The class `AzureOpenAIEmbeddings` was deprecated"
         )
-
         warnings.filterwarnings(
             "ignore",
             category=LangChainDeprecationWarning,
             message="The method `BaseChatModel.__call__` was deprecated"
         )
-
-
         validate_env_vars(config['required_vars'])
         return AzureOpenAIEmbeddings(
             azure_deployment=os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"],
@@ -97,7 +100,32 @@ def create_embedder_client(config):
         return HuggingFaceEmbeddings(
             model_name=config['config']['model'],
         )
-
+    elif provider == 'openai':
+        from langchain_openai import OpenAIEmbeddings
+        import warnings
+        from langchain_core._api.deprecation import LangChainDeprecationWarning
+        warnings.filterwarnings(
+            "ignore",
+            category=LangChainDeprecationWarning,
+            message="The class ChatOpenAI was deprecated"
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=LangChainDeprecationWarning,
+            message="The class OpenAIEmbeddings was deprecated"
+        )
+        warnings.filterwarnings(
+            "ignore",
+            category=LangChainDeprecationWarning,
+            message="The method BaseChatModel.__call__ was deprecated"
+        )
+        validate_env_vars(config['required_vars'])
+        return OpenAIEmbeddings(
+            azure_deployment=os.environ["OPENAI_EMBEDDING_DEPLOYMENT_NAME"],
+            openai_api_version=os.environ["OPENAI_API_VERSION"],
+            azure_endpoint=os.environ["OPENAI_ENDPOINT"],
+            api_key=os.environ["OPENAI_API_KEY"],
+        )
     # Add more embedder providers here as needed
     else:
         raise ValueError(f"Unsupported embedder provider: {provider}")
@@ -130,6 +158,10 @@ def get_embedchain_settings(task_id: str, llm_name: str, embedder_name: str) -> 
         llm_config['config']['deployment_name'] = getattr(llm, 'deployment_name')
         llm_config['config']['api_key'] = getattr(llm, 'openai_api_key')
         embedder_config['config']['deployment_name'] = getattr(embedder, 'deployment')
+        embedder_config['config']['api_key'] = getattr(embedder, 'openai_api_key')
+    elif llm_name == 'openai':
+        llm, embedder = get_clients(llm_name=llm_name, embedder_name=embedder_name)
+        llm_config['config']['api_key'] = getattr(llm, 'openai_api_key')
         embedder_config['config']['api_key'] = getattr(embedder, 'openai_api_key')
 
     return {
