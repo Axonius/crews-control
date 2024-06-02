@@ -150,7 +150,7 @@ user_inputs:
 crews:
   some_crew:
     # can use values from user input as part of the output filename, backstory and task description
-    output_naming_template: 'ouput_some_crew_filename_{user_input_1}_{user_input_2}.md'
+    output_naming_template: 'output_some_crew_filename_{user_input_1}_{user_input_2}.md'
     agents:
       some_agent:
         role: "Some Agent"
@@ -177,7 +177,7 @@ crews:
     depends_on:
       - some_crew
     # can use values from user input as part of the output filename, backstory and task description
-    output_naming_template: 'ouput_some_other_crew_filename_{user_input_1}_{user_input_2}.md'
+    output_naming_template: 'output_some_other_crew_filename_{user_input_1}_{user_input_2}.md'
     agents:
       some_agent:
         role: "Some Agent"
@@ -213,8 +213,8 @@ crews:
    - **Contents**:
      - **Required User Inputs**: Specifies the inputs that users need to provide for the execution of the project.
      - **Context File References**: References to any context files needed for the execution.
-   - **Context Subfolder**:
-     - If there are references to context files in the execution.yaml, these files should be placed in a subfolder named `context`.
+     - **Context Subfolder**:
+       - If there are references to context files in the execution.yaml, these files should be placed in a subfolder named `context`.
 
 2. **benchmark.yaml** (Optional):
    - **Purpose**: Used for batch processing and validation of the project.
