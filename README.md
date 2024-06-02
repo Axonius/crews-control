@@ -40,8 +40,6 @@ cp .env.example .env
 ```
 2. Open the newly created `.env` file and fill in the relevant values for each environment variable. These variables include API keys and other configuration settings necessary for the project's operation.
 
-Make sure to keep this `.env` file secure and do not expose it publicly, as it contains sensitive information.
-
 **Note:** Some environment variables may not be relevant to your specific use case. For example, if you don't need to create Jira tickets, you may not have a Jira server and therefore won't have Jira-related credentials. In such cases, fill in placeholder values to ensure the project functions correctly.
 
 Make sure to keep this .env file secure and do not expose it publicly, as it contains sensitive information.
