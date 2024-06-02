@@ -20,9 +20,6 @@ All files in this repository, except for the `requirements.in` and `requirements
 ### Requirements Files (GPL License)
 The `requirements.in` and `requirements.txt` files, which list the dependencies required to run this project, are licensed under the GNU General Public License (GPL). You can find the full text of the GPL in the [LICENSE-REQUIREMENTS](LICENSE-REQUIREMENTS) file.
 
-### Why Dual Licensing?
-Some dependencies listed in `requirements.in` and `requirements.txt` are licensed under the GPL. To comply with their licensing terms, these files themselves are licensed under the GPL. This ensures that users are aware of and comply with the GPL when using these dependencies.
-
 ## Prerequisites
 
 1. Python 3.12 (may work with other versions. Untested)
