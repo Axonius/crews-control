@@ -1,0 +1,188 @@
+settings:
+  output_results: true
+
+user_inputs:
+  github_repo_name:
+    title: "GitHub Repository Name"
+  pr_number:
+    title: "Pull Request Number"
+
+crews:
+  code_review_stage_1:
+    context:
+      stage_1_instructions: "stage-1-instructions.txt"
+    output_naming_template: '{github_repo_name}-pr-{pr_number}-security-review-stage-1.md'
+    agents:
+      security_analyst:
+        role: "Security Analyst"
+        goal: "To perform a thorough security review of the code in the PR."
+        backstory: >
+          As a Security Analyst, you are tasked with ensuring the security and integrity of code changes.
+          You will analyze the code diff in the PR {pr_number} of the {github_repo_name} repository, search for potential security flaws,
+          and verify the implementation against best practices.
+        tools:
+          - fetch_pr_content
+          - github_search
+      jira_specialist:
+        role: "Jira Specialist"
+        goal: "To fetch the details from the Jira ticket mentioned in the PR title and understand the purpose of the PR: {pr_number} of the github repo: {github_repo_name}."
+        backstory: >
+          As a Jira Specialist, your role is to gather context about the PR by fetching relevant details from the associated Jira ticket. This information will help in understanding the intent behind the code changes.
+        tools:
+          - jql_query
+          - fetch_pr_content
+
+    tasks:
+      fetch_jira_details:
+        agent: jira_specialist
+        description: >
+          Use the FetchPRContentTool tool to look in the PR title for a Jira ticket number. If found, fetch the details from the Jira ticket to understand what the PR was trying to accomplish.
+          When executing a tool - ensure you don't provide action input in json format! 
+        expected_output: >
+          Detailed information from the Jira ticket, including the ticket description, acceptance criteria, and any relevant comments that provide context for the PR.
+          Only provide the information that is available in the Jira ticket. If the ticket does not provide sufficient context, note that in the report.
+      analyze_pr_diff:
+        agent: security_analyst
+        description: >
+          Analyze the code diff in the GitHub repository: {github_repo_name} and PR number: {pr_number}.
+          Look for potential security issues such as hardcoded secrets, insecure API calls, and other common vulnerabilities.
+          INSTRUCTIONS:
+          ----------------
+          - When executing a tool - ensure you don't provide action input in json format!
+          {stage_1_instructions}
+        expected_output: >
+          A markdown report detailing any security issues found in the PR code diff, including line numbers, severity,
+          and recommendations for mitigation.
+          The report shall include the name of the GitHub repository and the PR number in the title.
+          For any recommendations, provide clear instructions on how to address the issues.
+          For any referenced functions or methods, provide the file path and class name if applicable.
+          If the only recommendation is to perform additional testing and review to ensure data integrity and consistent handling of
+          edge cases, consider the PR as not having any security issues and omit the recommendation section altogether - don't recommend
+          tasks that are difficult for an automated bot to perform.
+  code_review_stage_2:
+    context:
+      stage_2_instructions: "stage-2-instructions.txt"
+    depends_on:
+      - code_review_stage_1
+    output_naming_template: '{github_repo_name}-pr-{pr_number}-security-review-stage-2.md'
+    agents:
+      security_analyst:
+        role: "Security Analyst"
+        goal: "To verify all recommendations and mitigations suggested in a security report are met."
+        backstory: >
+          As a Security Analyst, your role is to address any concerns or recommendations or mitigations, etc, raised in the security review
+          report and amend the report to provide a final security assessment of the PR.
+        tools:
+          - fetch_pr_content
+          - github_search
+          - FindMethodImplementationTool
+    tasks:
+      verify_implementation:
+        agent: security_analyst
+        description: >
+          Address every concern, mitigation, recommendation, etc., raised in the security review report.
+
+          IMPORTANT INSTRUCTIONS:
+          {stage_2_instructions}
+          
+          [SECURITY REPORT]
+          {code_review_stage_1}
+          [/SECURITY REPORT]
+          
+          If you need to use the FindMethodImplementationTool and you don't know the initial class name, but know it's path,
+          use the github_search tool to find it. When executing a tool - ensure you don't provide action input in json format!
+          If you need to use the FindMethodImplementationTool tool, you need to use branch name 'main' for the '{github_repo_name}' repository.
+          All the context is available in the provided security report (no need to review the related PR for additional context).
+          Perform as many steps needed to address every concern, mitigation, recommendation, etc., raised in the security review report.
+          For each concern, mitigation, recommendation, etc., provide a clear explanation of how it was addressed.
+        expected_output: >
+          A revised security review report that includes the status of each concern, mitigation, recommendation, etc., raised in the initial report.
+  code_review_stage_3:
+    context:
+      stage_3_instructions: "stage-3-instructions.txt"
+    depends_on:
+      - code_review_stage_2
+    output_naming_template: '{github_repo_name}-pr-{pr_number}-security-review-stage-3.md'
+    agents:
+      security_analyst:
+        role: "Security Analyst"
+        goal: "To verify all recommendations and mitigations suggested in a security report are met."
+        backstory: >
+          As a Security Analyst, your role is to address any concerns or recommendations or mitigations, etc, raised in the security review
+          report and amend the report to provide a final security assessment of the PR.
+    tasks:
+      triage:
+        agent: security_analyst
+        description: >
+          Triage the report and decide if the PR is ready to be merged.
+
+          IMPORTANT INSTRUCTIONS:
+          {stage_3_instructions}
+          
+          [SECURITY REPORT]
+          {code_review_stage_2}
+          [/SECURITY REPORT]
+        expected_output: >
+          A final triage verdict on whether the PR is ready to be merged or if further action is required.
+          The output should be in markdown format and be succinct - maximum 3 sentences.
+          If the PR is ready to be merged, include the string "PR_READY_TO_MERGE" in the output.
+          If the PR is not ready to be merged, include the string "PR_NOT_READY_TO_MERGE" in the output.
+  code_review_stage_4:
+    context:
+      jira-ticket-instructions: "jira-ticket-instructions.txt"
+      jira-ticket-template: "jira-ticket-template.md"
+    depends_on:
+      - code_review_stage_2
+      - code_review_stage_3
+    output_naming_template: '{github_repo_name}-pr-{pr_number}-security-review-stage-4.md'
+    agents:
+      security_analyst:
+        role: "Security Analyst"
+        goal: "To create a final security assessment of the PR."
+        backstory: >
+          As a Security Analyst, your role is to provide a final security assessment of the PR.
+    tasks:
+      report:
+        agent: security_analyst
+        description: >
+          If final triage report indicates the PR is not ready to be merged, extract all issues from the security report
+          bellow and create a final actionable report.
+          
+          [FINAL TRIAGE REPORT]
+          {code_review_stage_3}
+          [/FINAL TRIAGE REPORT]
+
+          [SECURITY REPORT]
+          {code_review_stage_2}
+          [/SECURITY REPORT]
+        expected_output: >
+          A markdown report that includes a final security assessment of the PR.
+          The report should either state the PR is ready to be merged or provide a list of actionable items that need to be
+          addressed before merging. The actionable items are verbatim copy of the confirmed issues from the security report.
+          The report shall contain both confirmed and non-confirmed/non-resolved issues.
+          The report shall sort the issues based on priority and severity - critical on top.
+          Non-confirmed/non-resolved issues should be marked as such and appear at the bottom.
+      create_jira_issue:
+        agent: security_analyst
+        description: >
+          Create a Jira issue for the PR with the following content in the description:
+          ---
+          {code_review_stage_2}
+          ---
+
+          IMPORTANT INSTRUCTIONS:
+          -----------------------
+          {jira-ticket-instructions}
+
+          The ticket shall follow the following template:
+          -----------------------------------------------
+          {jira-ticket-template}
+
+          The jira ticket title shall include the PR number: "{pr_number} and the github repo name: "{github_repo_name}" and the tag "CREWS-CONTROL-TEST".
+          The description should be formatted according to the Jira formatting guide.
+          The status of the Jira ticket should be set to either "AI_REVIEW" or "AI_DISCARDED" based on the final triage report,
+          where "AI_REVIEW" indicates there are confirmed unresolved security findings and "AI_DISCARDED" indicates the PR is ready to be merged.
+        expected_output: >
+          The link to the created jira issue.
+        tools:
+          - create_issue

@@ -1,0 +1,32 @@
+settings:
+  output_results: true
+
+crews:
+  task_splitter_crew:
+    output_naming_template: 'execution.yaml'
+    agents:
+      splitter_agent:
+        role: "Execution Splitter"
+        goal: >
+          Take an existing execution.yaml file with many tasks and rearrange it into several crews with one task in each crew.
+          This will facilitate parallel processing and generate an output artifact for each task.
+        tools:
+          - human
+        backstory: >
+          A proficient software engineer with expertise in parsing YAML files and restructuring data for
+          optimized parallel task execution.
+
+    tasks:
+      split_execution_file_task:
+        agent: splitter_agent
+        description: >
+          Ask a human to provide an execution.yaml file and analyze its structure to identify all the tasks.
+          Create a new execution.yaml structure where each task is assigned to a separate crew.
+          Ensure that each crew has the necessary information and structure to execute the task independently.
+          Write the new execution.yaml file to the system.
+        expected_output: >
+          A new execution.yaml file where each task from the original file is now managed by a separate crew,
+          allowing for individual task processing and output generation.
+
+          The execution.yaml shall be complete with all the necessary information for each crew to execute their tasks.
+          Don't truncate any section or use placeholders. Ensure that the new file is well-structured and ready for execution.

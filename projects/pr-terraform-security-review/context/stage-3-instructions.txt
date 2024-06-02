@@ -1,0 +1,2 @@
+- We are not concerned about low priority issues - ignore those.
+- We are not concerned about hypothetical concerns - only absolutely verified real issues.

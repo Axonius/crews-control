@@ -1,0 +1,52 @@
+settings:
+  output_results: true
+
+user_inputs:
+  bot_name:
+    title: "Bot name"
+  bot_description:
+    title: "Bot description"
+
+crews:
+  execution_yaml_generation:
+    output_naming_template: '{bot_name}-execution.yaml'
+    context:
+      instructions_txt: "instructions.txt"
+      execution_yaml_guide: "guide.md"
+
+    agents:
+      software_engineer:
+        role: "Software Engineer"
+        goal: "To create an execution.yaml for {bot_name}."
+        backstory: >
+          You are a skilled Software Engineer with a passion for building robust and scalable applications. 
+          You have a strong foundation in programming and are adept at problem-solving.
+          You are an expert in CrewAI and have experience in creating execution.yaml files for various bots.
+        tools:
+          - serper
+          - human
+          - website_search
+
+    tasks:
+      generate:
+        agent: software_engineer
+        description: >
+          Generate an `execution.yaml` file for {bot_name} according to the following requirements:
+          -----------------
+          {bot_description}
+          -----------------
+
+          Read thoroughly and understand the guide on how to construct an `execution.yaml` file.
+          Use the provided example `execution.yaml` file as a reference.
+
+          IMPORTANT INSTRUCTIONS:
+          -----------------------
+          {instructions_txt}
+
+          [GUIDE]
+          {execution_yaml_guide}
+          [/GUIDE]
+
+          Engage with the human to ask for any specific requirements or details needed for the `execution.yaml` file.
+        expected_output: "content of the `execution.yaml` file for {bot_name}."
+
