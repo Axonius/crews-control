@@ -277,3 +277,4 @@ def list_projects():
         if project.is_dir():
             print(f'- {project.name}')
     print()
+

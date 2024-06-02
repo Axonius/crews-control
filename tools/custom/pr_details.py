@@ -41,6 +41,21 @@ class GitHubPRDetailsTool(BaseTool):
 
         if diff_response.status_code == 200:
             diff_content = diff_response.text
+            # Excluding certain files from the diff content (WIP: support pagination for large diffs)
+            excluded_files = [] # e.g., 'requirements.txt' (may have many hashes causing large diffs)
+            diff_lines = diff_content.split('\n')
+            filtered_diff_lines = []
+            skip_file = False
+
+            for line in diff_lines:
+                if line.startswith('diff --git'):
+                    file_name = line.split(' ')[-1].replace('b/', '')
+                    skip_file = file_name in excluded_files
+
+                if not skip_file:
+                    filtered_diff_lines.append(line)
+
+            diff_content = '\n'.join(filtered_diff_lines)
         else:
             diff_content = f"Failed to fetch diff: HTTP {diff_response.status_code} - {diff_response.reason}"
 
