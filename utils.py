@@ -49,8 +49,8 @@ def create_llm_client(config):
             temperature=config.get('temperature', 0),
             openai_api_version=os.getenv("OPENAI_API_VERSION"),
             azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-            api_key=os.environ["AZURE_OPENAI_KEY"],
-            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+            api_key=os.getenv("AZURE_OPENAI_KEY"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
         )
     elif provider == 'openai':
         from langchain_openai import ChatOpenAI
@@ -88,10 +88,10 @@ def create_embedder_client(config):
         )
         validate_env_vars(config['required_vars'])
         return AzureOpenAIEmbeddings(
-            azure_deployment=os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"],
-            openai_api_version=os.environ["OPENAI_API_VERSION"],
-            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-            api_key=os.environ["AZURE_OPENAI_API_KEY"],
+            azure_deployment=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"),
+            openai_api_version=os.getenv("OPENAI_API_VERSION"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         )
     elif provider == 'huggingface':
         import warnings
@@ -121,9 +121,9 @@ def create_embedder_client(config):
         )
         validate_env_vars(config['required_vars'])
         return OpenAIEmbeddings(
-            model=os.environ["OPENAI_EMBEDDING_MODEL_NAME"],
-            openai_api_version=os.environ["OPENAI_API_VERSION"],
-            api_key=os.environ["OPENAI_API_KEY"],
+            model=os.getenv("OPENAI_EMBEDDING_MODEL_NAME"),
+            openai_api_version=os.getenv("OPENAI_API_VERSION"),
+            api_key=os.getenv("OPENAI_API_KEY"),
         )
     # Add more embedder providers here as needed
     else:
