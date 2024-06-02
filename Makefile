@@ -56,6 +56,7 @@ $(LIST_TOOLS):
 	@docker run \
 		-it \
 		--env-file .env \
+		-v $(PWD)/config:/app/config \
 		-v $(PWD)/db:/app/db \
 		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
@@ -66,6 +67,7 @@ $(LIST_MODELS):
 	@docker run \
 		-it \
 		--env-file .env \
+		-v $(PWD)/config:/app/config \
 		-v $(PWD)/db:/app/db \
 		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
@@ -76,6 +78,7 @@ $(LIST_PROJECTS):
 	@docker run \
 		-it \
 		--env-file .env \
+		-v $(PWD)/config:/app/config \
 		-v $(PWD)/db:/app/db \
 		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
@@ -112,6 +115,7 @@ $(RUN_IT):
 	@docker run \
 		-it \
 		--env-file .env \
+		-v $(PWD)/config:/app/config \
 		-v $(PWD)/db:/app/db \
 		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
@@ -144,6 +148,7 @@ $(RUN):
 	@mkdir -p $(PWD)/projects/$(PROJECT_NAME)/output
 	@docker run \
 		--env-file .env \
+		-v $(PWD)/config:/app/config \
 		-v $(PWD)/db:/app/db \
 		-v $(PWD)/tools:/app/tools \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
@@ -155,6 +160,7 @@ $(BENCHMARK):
 	@docker run \
 		-it \
 		--env-file .env \
+		-v $(PWD)/config:/app/config \
 		-v $(PWD)/db:/app/db \
 		-v $(PWD)/projects/$(PROJECT_NAME):/app/projects/$(PROJECT_NAME) \
 		-v $(PWD)/projects/$(PROJECT_NAME)/output:/app/projects/$(project_name)/output \
