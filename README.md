@@ -29,7 +29,25 @@ Some dependencies listed in `requirements.in` and `requirements.txt` are license
 
 2. Docker (optional) - to run dockerized version.
 
-3. API keys listed in [.env.example](.env.example)
+3. Environment variables listed in [.env.example](.env.example)
+
+Sure, here is the suggested section to add to your README:
+
+### Environment Setup
+
+The project requires certain environment variables to function correctly. These variables are listed in the `.env.example` file. To configure these variables, follow these steps:
+
+1. Copy the `.env.example` file and rename the copy to `.env`:
+```bash
+cp .env.example .env
+```
+2. Open the newly created `.env` file and fill in the relevant values for each environment variable. These variables include API keys and other configuration settings necessary for the project's operation.
+
+Make sure to keep this `.env` file secure and do not expose it publicly, as it contains sensitive information.
+
+**Note:** Some environment variables may not be relevant to your specific use case. For example, if you don't need to create Jira tickets, you may not have a Jira server and therefore won't have Jira-related credentials. In such cases, fill in placeholder values to ensure the project functions correctly.
+
+Make sure to keep this .env file secure and do not expose it publicly, as it contains sensitive information.
 
 ## Installation
 
