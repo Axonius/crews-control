@@ -121,9 +121,8 @@ def create_embedder_client(config):
         )
         validate_env_vars(config['required_vars'])
         return OpenAIEmbeddings(
-            azure_deployment=os.environ["OPENAI_EMBEDDING_DEPLOYMENT_NAME"],
+            model=os.environ["OPENAI_EMBEDDING_MODEL_NAME"],
             openai_api_version=os.environ["OPENAI_API_VERSION"],
-            azure_endpoint=os.environ["OPENAI_ENDPOINT"],
             api_key=os.environ["OPENAI_API_KEY"],
         )
     # Add more embedder providers here as needed
