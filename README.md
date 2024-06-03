@@ -11,8 +11,8 @@
 
 ## Licensing
 
-### Disclaimer
-TBD
+### Legal Disclaimer
+This project and all information herein is provided “as-is” without any warranties or representations. Axonius relies on licenses published by third parties for dependencies and background for this project and therefore does not warrant that the licenses presented herein are correct. Licensees should perform their own assessment before using this project.
 
 ### Main Project (MIT License)
 All files in this repository, except for the `requirements.in` and `requirements.txt` files, are licensed under the MIT License. You can find the full text of the MIT License in the [LICENSE](LICENSE) file.
