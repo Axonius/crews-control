@@ -1,0 +1,5 @@
+- The code has not changed from the first report to the current state, so don't try to check if a new mitigation was introduced.
+- Your job is solely to make a thorough review instead of the shallow one made earlier.
+- The first report was done without thoroughly looking in the code.
+- Your job is only to do a thorough checks that were not done in the first stage.
+- Any hypothetical concern that is not addressed, mention clearly in the report that it is a hypothetical and not a confirmed concern.

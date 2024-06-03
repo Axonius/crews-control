@@ -1,0 +1,83 @@
+settings:
+  output_results: true
+
+user_inputs:
+  tool_name:
+    title: "Tool name"
+
+crews:
+  function_creation:
+    output_naming_template: '{tool_name}_function.py'
+    agents:
+      software_engineer:
+        role: "Software Engineer"
+        goal: "To create a function based on the provided human request."
+        tools:
+          - human
+          - website_search
+        backstory: >
+          You are an experienced Software Engineer with a strong background in Python programming.
+          You can create functions based on the provided requirements and are skilled in problem-solving
+          and code optimization.
+          Your functions always follow best practices and are well-documented.
+          Your functions always accept string inputs and return a single string output.
+    tasks:
+      create_function:
+        agent: software_engineer
+        description: >
+          Ask the human to provide a description of the function they need.
+          Search the internet to find out how to implement the function based on the description.
+          Create a function based on the provided description.
+          Ensure the function follows best practices and is well-documented.
+          Ensure the function accepts string inputs and returns a single string output.
+          Ensure the function is in Python programming language.
+          Ensure the function is properly formatted and follows PEP8 guidelines.
+          You can create as complex a function as needed based on the provided description.
+          You are not limited to simple functions.
+          You are free to use any libraries or dependencies that are necessary.
+          Ensure the function is complete and does not require additional code to run.
+        expected_output: >
+          The complete function code based on the provided description.
+          The function should be in Python programming language.
+          There shall not be any text before or after the function definition and it shall not be surrounded with 
+          in a code block. The output shall be verbatim.
+  tool_creation:
+    depends_on:
+      - function_creation
+    output_naming_template: '{tool_name}_tool.py'
+
+    context:
+      example_tool: 'example_tool.py'
+    agents:
+      software_engineer:
+        role: "Software Engineer"
+        goal: "To create a tool based on the provided Python function."
+        tools:
+          - human
+        backstory: >
+          Based on the provided Python function, you are tasked with creating a tool that follows the structure of the example tool in the provided context.
+
+    tasks:
+      create_tool:
+        agent: software_engineer
+        description: >
+          Ask the human to provide any special requirements for the tool.
+          Create a tool based on the provided function.
+          The tool should follow the structure of the example tool in the provided context.
+          Ensure that all functions have proper docstrings and comments.
+          Ensure that all arguments are type hinted and are the same as the provided function.
+          Ensure the tool is complete with all necessary imports and dependencies.
+          Ensure the tool is in python programming language.
+          Ensure the tool is properly formatted and follows PEP8 guidelines.
+          Ensure the tool includes all necessary functions and classes (don't instruct the user to copy implementation code from the provided input).
+
+          [PROVIDED FUNCTION]
+          {function_creation}
+          [/PROVIDED FUNCTION]
+
+          [PROVIDED CONTEXT]
+          {example_tool}
+          [/PROVIDED CONTEXT]
+        expected_output: >
+          The complete tool code that follows the structure of the example tool in the provided context.
+          The tool should be in python programming language.

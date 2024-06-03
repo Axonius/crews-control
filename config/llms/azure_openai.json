@@ -1,0 +1,16 @@
+{
+    "provider": "azure_openai",
+    "required_vars": [
+        "OPENAI_API_VERSION",
+        "AZURE_OPENAI_DEPLOYMENT",
+        "AZURE_OPENAI_KEY",
+        "AZURE_OPENAI_LLM_DEPLOYMENT_NAME",
+        "AZURE_OPENAI_ENDPOINT"
+    ],
+    "config": {
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "top_p": 1,
+        "stream": false
+    }
+}

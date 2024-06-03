@@ -1,0 +1,11 @@
+{
+    "provider": "groq",
+    "required_vars": [
+        "GROQ_MODEL_NAME",
+        "GROQ_API_KEY"
+    ],
+    "config": {
+        "stream": true,
+        "max_tokens": 8192
+    }
+}

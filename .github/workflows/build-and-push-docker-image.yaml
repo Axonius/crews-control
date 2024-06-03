@@ -1,0 +1,43 @@
+name: Crews-Control Docker Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  crews-control-docker-image:
+    runs-on: [self-hosted-common-strong]
+    environment: crews-control
+    steps:
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # actions/checkout@v3
+        with:
+          path: 'crews-control-action'
+          ref: 'main'
+
+      - name: Get the commit SHA of Crews-Control
+        run: echo "CREWS_CONTROL_SHA=$(git -C crews-control-action rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ARTIFACTS_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ARTIFACTS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.ECR_AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@261a7de32bda11ba01f4d75c4ed6caf3739e54be # aws-actions/amazon-ecr-login@v1
+      
+      - name: Build, tag and push the image to ECR
+        id: build-push
+        working-directory: 'crews-control-action'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.CREWS_CONTROL_ACTION_IMAGE_NAME }}
+        run: |
+          echo "Building the image"
+          
+          docker build --no-cache \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:${CREWS_CONTROL_SHA}" \
+            .
+          echo "Pushing image to ECR"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:${CREWS_CONTROL_SHA}"

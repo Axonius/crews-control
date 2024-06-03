@@ -1,0 +1,17 @@
+executions:
+  - user_inputs:
+      github_repo_name: "Axonius/crews-control"
+      pr_number: "1"
+    validations:
+      code_review_stage_3:
+        compare_to: "The PR is deemed secure and **PR_READY_TO_MERGE**."
+        metrics:
+            pr_ready_to_merge: "both files show the PR is ready to be merged with key `PR_READY_TO_MERGE`"
+  - user_inputs:
+      github_repo_name: "Axonius/crews-control"
+      pr_number: "1"
+    validations:
+      code_review_stage_3:
+        compare_to: axonius_crews_control_1_validation
+        metrics:
+            pr_ready_to_merge: "both files show the PR is ready to be merged with key `PR_READY_TO_MERGE`"
