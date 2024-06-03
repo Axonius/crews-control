@@ -345,15 +345,9 @@ By using the dependencies listed in `requirements.txt`, you agree to comply with
 - If you distribute a derivative work that includes GPL-licensed dependencies, you must release the source code of the entire work under the GPL.
 - You must include a copy of the GPL license with any distribution of the work.
 
-### How to Use This Project
-
-To use this project while complying with the licenses:
-1. Keep the main project code and the `requirements.txt` file separate when possible.
-2. Clearly indicate which parts of your project are under the MIT license and which parts are under the GPL if you make modifications or distribute the project.
-
 ## Contribution
 
-Contributions to the main project code should be made under the terms of the MIT License. Contributions to the `requirements.txt` file should comply with the GPL.
+Contributions to the main project code should be made under the terms of the MIT License. Contributions to the `requirements.in`, `requirements.txt` files should comply with the GPL.
 
 ## Third-Party Licenses
 
