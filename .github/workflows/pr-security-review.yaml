@@ -1,3 +1,5 @@
+# Example deployment of Crews Control `pr-security-review` project as a GitHub action workflow
+
 name: PR Security Review - merged PRs (main branch)
 
 on:
