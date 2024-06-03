@@ -1,0 +1,95 @@
+name: PR Security Review - merged PRs (main branch)
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+env:
+  CREWS_CONTROL_ACTION_TAG_NAME: 'a3fe632893c30f9d983b6c4ef3dbeb08fa2f272a'
+
+jobs:
+  run-ecr-image:
+    if: github.event.pull_request.merged == true
+    runs-on: [self-hosted-common-strong]
+    environment:
+      name: crews-control
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # actions/checkout@v3
+
+      - name: Set up DB directory
+        run: |
+          mkdir -p ${{ github.workspace }}/images/crews-control-action/db
+          mkdir -p ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/
+          cp -r ./.github/actions/crews-control/projects/pr-security-review/* ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/
+          mkdir -p ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/output
+          mkdir -p ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/validations
+          chmod -R 777 ${{ github.workspace }}/images/crews-control-action/db
+          chmod -R 777 ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review
+          chmod -R 777 ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/output
+          chmod -R 777 ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/validations
+        working-directory: ${{ github.workspace }}
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ${{ secrets.ECR_AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@261a7de32bda11ba01f4d75c4ed6caf3739e54be # aws-actions/amazon-ecr-login@v1
+        with:
+          registries: "${{ secrets.ECR_REGISTRY }}"
+
+      - name: Pull and Run the Docker Image from ECR
+        run: |
+          docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.CREWS_CONTROL_ACTION_IMAGE_NAME }}:$CREWS_CONTROL_ACTION_TAG_NAME
+          docker run -v ${{ github.workspace }}/images/crews-control-action/db:/app/db \
+                     -v ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review:/app/projects/pr-security-review \
+                     -v ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/output:/app/projects/pr-security-review/output \
+                     -v ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/validations:/app/projects/pr-security-review/validations \
+                     -e AZURE_OPENAI_VERSION=${{ secrets.AZURE_OPENAI_VERSION }} \
+                     -e AZURE_OPENAI_DEPLOYMENT=${{ secrets.AZURE_OPENAI_DEPLOYMENT }} \
+                     -e AZURE_OPENAI_LLM_DEPLOYMENT_NAME=${{ secrets.AZURE_OPENAI_LLM_DEPLOYMENT_NAME }} \
+                     -e AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME }} \
+                     -e AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }} \
+                     -e AZURE_OPENAI_KEY=${{ secrets.AZURE_OPENAI_KEY }} \
+                     -e OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_KEY }} \
+                     -e OPENAI_API_VERSION=${{ secrets.OPENAI_API_VERSION }} \
+                     -e SERPER_API_KEY=${{ secrets.SERPER_API_KEY }} \
+                     -e EC_TELEMETRY=false \
+                     -e JIRA_API_TOKEN=${{ secrets.JIRA_API_TOKEN }} \
+                     -e JIRA_USERNAME=${{ secrets.JIRA_USERNAME }} \
+                     -e JIRA_INSTANCE_URL=${{ secrets.JIRA_INSTANCE_URL }} \
+                     -e JIRA_CREATE_ISSUE_PROJECT_KEY=${{ secrets.JIRA_CREATE_ISSUE_PROJECT_KEY }} \
+                     -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+                      ${{ steps.login-ecr.outputs.registry }}/${{ secrets.CREWS_CONTROL_ACTION_IMAGE_NAME }}:$CREWS_CONTROL_ACTION_TAG_NAME \
+                      python main.py --project-name pr-security-review --params github_repo_name="${{ github.repository }}" pr_number="${{ github.event.pull_request.number }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload output files
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # actions/upload-artifact@v2
+        with:
+          name: output
+          path: ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/output
+
+      - name: Upload validations files
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # actions/upload-artifact@v2
+        with:
+          name: validations
+          path: ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/validations
+
+      - name: Check PR readiness
+        run: |
+          repo_name="${{ github.repository }}"
+          repo_name="${repo_name//\//-}"
+          file_path="${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/output/${repo_name}-pr-${{ github.event.pull_request.number }}-security-review-stage-3.md"
+          if grep -q "PR_NOT_READY_TO_MERGE" "$file_path"; then
+            echo "PR is not ready to be merged. Failing the workflow."
+            exit 1
+          else
+            echo "PR is ready to be merged."
+          fi
