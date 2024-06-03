@@ -8,7 +8,7 @@ on:
       - closed
 
 env:
-  CREWS_CONTROL_ACTION_TAG_NAME: 'a3fe632893c30f9d983b6c4ef3dbeb08fa2f272a'
+  CREWS_CONTROL_ACTION_TAG_NAME: ${{ secrets.CREWS_CONTROL_ACTION_TAG_NAME }}
 
 jobs:
   run-ecr-image:
