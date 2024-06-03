@@ -49,7 +49,9 @@ class JiraTicketCreationTool(BaseTool):
                 print(f"No transition found with name {status}")
 
             print(f"Jira ticket status updated to: {status}")
-            return {'ticket_key': new_issue.key, 'status': status}
+            return {'ticket_key': new_issue.key,
+                    'status': status,
+                    'link': f'{jira_server}/browse/{new_issue.key}'}
         except Exception as e:
             print(f"Error creating Jira ticket: {e}")
             return {'error': str(e), 'status': 'Failed'}

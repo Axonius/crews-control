@@ -5,59 +5,51 @@ import time
 import ast
 import datetime
 
+MAX_CONTENT_LEN = 10000
+SNIPPET_LEN = 1000
+
 class GitHubSearchTool(BaseTool):
     """A tool that searches for code snippets in a GitHub repository."""
     name: str = "GitHubSearchTool"
     description: str = (
-        """You use this tool to search for query terms inside of a file in a GitHub repository.
-        
-        Except with filename searches, you must always include at least one search term when searching source code.
-        For example, searching for language:javascript is not valid, while amazing language:javascript is.
+        """
+**Tool Name: GitHubSearchTool**
 
-        At most, search results can show two fragments from the same file, but there may be more results within the file.
-        You can't use the following wildcard characters as part of your search query:
+**Description:**
+Use this tool to search for specific query terms within a file in a GitHub repository. Follow these rules and examples to ensure correct usage:
 
-        ---
-        . , : ; / \\ ` ' " = * ! ? # $ & + ^ | ~ < > ( ) { } [ ] @
-        ---
+1. **General Rules:**
+   - Always include at least one search term when searching source code.
+   - Avoid using wildcard characters: `. , : ; / \\ ` ' " = * ! ? # $ & + ^ | ~ < > ( ) { } [ ] @`.
+   - Use qualifiers to refine your search:
+     - **in:file** - Search within file contents. Example: `"octocat in:file"`
+     - **in:path** - Search within file paths. Example: `"octocat in:path"`
+     - **in:file,path** - Search within both file contents and paths. Example: `"octocat in:file,path"`
 
-        The search will simply ignore these symbols.
+2. **Path Qualifiers:**
+   - **path:/** - Search files at the root level. Example: `"octocat filename:readme path:/"`
+   - **path:DIRECTORY** - Search files in a specific directory. Example: `"form path:cgi-bin language:perl"`
+   - **path:PATH/TO/DIRECTORY** - Search files in a specific directory and its subdirectories. Example: `"console path:app/public language:javascript"`
 
-        With the `in` qualifier you can restrict your search to the contents of the source code file, the file path, or both.
-        When you omit this qualifier, only the file contents are searched.
+3. **Language Qualifiers:**
+   - Specify the language to refine your search. Example: `"element language:xml"`
 
-        in:file - Only code in the file is searched. Example: "octocat in:file" matches code where "octocat" appears in the file contents.
-        in:path - Only the file path is searched. Example: "octocat in:path" matches code where "octocat" appears in the file path.
-        in:file,path - Code in the file and the file path is searched. Example: "octocat in:file,path" matches code where "octocat" appears in the file contents or the file path.
+4. **Size Qualifiers:**
+   - Filter results based on file size. Example: `"function size:>10000 language:python"`
 
-        You can use the `path` qualifier to search for source code that appears at a specific location in a repository.
-        Use "path:/" to search for files that are located at the root level of a repository.
-        Or specify a directory name or the path to a directory to search for files that are located within that directory or any of its subdirectories.
+5. **Filename Qualifiers:**
+   - Search for files with a specific name. Example: `"filename:linguist"`
+   - Combine with path and language qualifiers. Example: `"filename:test_helper path:test language:ruby"`
 
-        path:/ - Search for files located at the root level of a repository. Example: "octocat filename:readme path:/" matches readme files with the word "octocat" that are located at the root level of a repository.
-        path:DIRECTORY - Search for files in a specific directory or path. Example: "form path:cgi-bin language:perl" matches Perl files with the word "form" in the cgi-bin directory, or in any of its subdirectories.
-        path:PATH/TO/DIRECTORY - Search for files in a specific directory or path. Example: "console path:app/public language:javascript" matches JavaScript files with the word "console" in the app/public directory, or in any of its subdirectories (even if they reside in app/public/js/form-validators).
+6. **Extension Qualifiers:**
+   - Search for files with a specific extension. Example: `"icon size:>200000 extension:css"`
 
-        You can search for code based on what language it's written in. The language qualifier can be the language name or alias.
+**Examples:**
+- **Simple Search:** `"COPY filename:Dockerfile repo:Axonius/crews-control"`
+- **Complex Search:** `"COPY in:file filename:Dockerfile path:/src repo:Axonius/crews-control"`
 
-        language:LANGUAGE - Example: "element language:xml size:100" matches code with the word "element" that's marked as being XML and has exactly 100 bytes.
-        language:LANGUAGE - Example: "display language:scss" matches code with the word "display," that's marked as being SCSS.
-
-        You can use the size qualifier to search for source code based on the size of the file where the code exists.
-        The size qualifier uses greater than, less than, and range qualifiers to filter results based on the byte size of the file in which the code is found.
-
-        size:n - Example: "function size:>10000 language:python" matches code with the word "function," written in Python, in files that are larger than 10 KB.
-
-        The filename qualifier matches code files with a certain filename. You can also find a file in a repository using the file finder.
-
-        filename:FILENAME - Example: "filename:linguist" matches files named "linguist".
-        filename:FILENAME - Example: "filename:.vimrc commands" matches .vimrc files with the word "commands."
-        filename:FILENAME - Example: "filename:test_helper path:test language:ruby" matches Ruby files named test_helper within the test directory.
-
-        The extension qualifier matches code files with a certain file extension.
-
-        extension:EXTENSION	- Example: "form path:cgi-bin extension:pm" matches code with the word "form," under cgi-bin, with the .pm file extension.
-        extension:EXTENSION	- Example: "icon size:>200000 extension:css" matches files larger than 200 KB that end in .css and have the word "icon".
+**Error Handling:**
+- If you encounter a query parsing error (422), check for disallowed special characters and ensure the query includes at least one valid search term.
         """
         )
     
@@ -76,16 +68,40 @@ class GitHubSearchTool(BaseTool):
             code_results = []
             if search_result.totalCount > 10:
                 error_message = 'Too many results. Please narrow down the search. Returning without file content.'
-            for item in search_result:
-                file_content = item.decoded_content.decode('utf-8')
-                if item.path.endswith('.py'):
-                    classes, methods = self.parse_python_code(file_content)
-                else:
-                    classes, methods = [], []
-                code_results.append({'filename': item.path,
-                                     'content': file_content if search_result.totalCount <= 10 else error_message,
-                                     'classes': classes,
-                                     'methods': methods})
+                for item in search_result:
+                    if item.path.endswith('.py'):
+                        classes, methods = self.parse_python_code('')
+                    else:
+                        classes, methods = [], []
+                    code_results.append({
+                        'filename': item.path,
+                        'content': error_message,
+                        'classes': classes,
+                        'methods': methods
+                    })
+            else:
+                for item in search_result:
+                    file_content = item.decoded_content.decode('utf-8')
+                    if item.path.endswith('.py'):
+                        classes, methods = self.parse_python_code(file_content)
+                    else:
+                        classes, methods = [], []
+
+                    if len(file_content) <= MAX_CONTENT_LEN:
+                        content = file_content
+                    else:
+                        if search_result.totalCount > 1:
+                            content = 'file content too large - narrow search to this file only!'
+                        else:
+                            content = file_content[:SNIPPET_LEN] + '\n\n...content too large - showing snippet only.'
+
+                    code_results.append({
+                        'filename': item.path,
+                        'content': content,
+                        'classes': classes,
+                        'methods': methods
+                    })
+            
             return str(code_results)
         except GithubException as e:
             if e.status == 403 and 'rate limit' in e.data['message'].lower():

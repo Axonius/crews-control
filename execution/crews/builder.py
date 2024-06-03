@@ -203,6 +203,7 @@ class CrewRunner:
                     retry_count += 1
                     wait_time = backoff_factor ** retry_count
                     rich.print(f"[yellow bold]Rate limit error encountered. Retrying in {wait_time} seconds...[/yellow bold]")
+                    rich.print(f"[yellow bold]Exception details: {e}[/yellow bold]")
                     time.sleep(wait_time)
                 else:
                     rich.print(f"[red bold]Error occurred while running crew <{self._crew_name}>[/red bold]")
