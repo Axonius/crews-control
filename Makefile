@@ -42,7 +42,7 @@ help:
 	@echo "  $(CLEANUP)              - Perform Docker cleanup"
 	@echo "  $(HELP)                 - Show this help message"
 	@echo
-	@echo "For license details, see the LICENSE.md file."
+	@echo "For license details, see the LICENSE file."
 
 
 it: $(COMPILE_REQUIREMENTS) $(BUILD) $(RUN_IT)
