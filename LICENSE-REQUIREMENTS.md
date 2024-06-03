@@ -3,7 +3,7 @@ This repository includes the following files which are licensed under the GNU Ge
 - `requirements.in`
 - `requirements.txt`
 
-The rest of the repository is licensed under the MIT License, which can be found in the `LICENSE` file.
+The rest of the repository is licensed under the MIT License, which can be found in the `LICENSE.md` file.
 
 The text of the GNU General Public License follows below.
 
