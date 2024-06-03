@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.venv/**
+.vscode/**
+__pycache__/**
+execution/__pycache__/**
+execution/**/__pycache__/**
+tools/__pycache__/**
+tools/**/__pycache__/**
+projects/**/output/**
+projects/**/validations/**
+db/**

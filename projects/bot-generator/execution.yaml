@@ -1,0 +1,81 @@
+settings:
+  output_results: true
+
+user_inputs:
+  bot_name:
+    title: "Bot name"
+  bot_description:
+    title: "Bot description"
+
+crews:
+  execution_yaml_generation:
+    output_naming_template: '{bot_name}-execution.yaml'
+    context:
+      instructions_txt: "instructions.txt"
+      execution_yaml_guide: "guide.md"
+
+    agents:
+      software_engineer:
+        role: "Software Engineer"
+        goal: "To create an execution.yaml for {bot_name}."
+        backstory: >
+          You are a skilled Software Engineer with a passion for building robust and scalable applications. 
+          You have a strong foundation in programming and are adept at problem-solving.
+          You are an expert in CrewAI and have experience in creating execution.yaml files for various bots.
+        tools:
+          - serper
+          - human
+          - website_search
+
+    tasks:
+      generate:
+        agent: software_engineer
+        description: >
+          Generate an `execution.yaml` file for {bot_name} according to the following requirements:
+          -----------------
+          {bot_description}
+          -----------------
+
+          Read thoroughly and understand the guide on how to construct an `execution.yaml` file.
+          Use the provided example `execution.yaml` file as a reference.
+
+          IMPORTANT INSTRUCTIONS:
+          -----------------------
+          {instructions_txt}
+
+          [GUIDE]
+          {execution_yaml_guide}
+          [/GUIDE]
+
+          Engage with the human to ask for any specific requirements or details needed for the `execution.yaml` file.
+        expected_output: "content of the `execution.yaml` file for {bot_name}."
+
+  code_block_marker_remover:
+    depends_on:
+      - execution_yaml_generation
+    output_naming_template: 'final-{bot_name}-execution.yaml'
+    agents:
+      software_engineer:
+        role: "Software Engineer"
+        goal: "To remove code block markers from the generated execution.yaml."
+        backstory: >
+          You are a skilled Software Engineer with experience in parsing and manipulating text files.
+          You are proficient in Python programming and have a keen eye for detail.
+          Your expertise lies in data processing and text manipulation.
+    tasks:
+      remove_code_block_markers:
+        agent: software_engineer
+        description: >
+          Remove the code block markers (if any) from the GENERATED_FILE.
+          
+          Any text before or after the code block markers should be removed, and the content within the code block markers
+          shall be preserved.
+          
+          Ensure that the final output does not contain any code block markers.
+
+          [GENERATED_FILE]
+          {execution_yaml_generation}
+          [/GENERATED_FILE]
+        expected_output: >
+          Verbatim content without any code block markers and without the text before or after the code block markers.
+          Only the content within the code block markers shall be preserved (or the entire content if there were no code block markers).

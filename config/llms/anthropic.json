@@ -1,0 +1,11 @@
+{
+    "provider": "anthropic",
+    "required_vars": [
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_MODEL_NAME"
+    ],
+    "config": {
+        "temperature": 0.7,
+        "max_tokens": 1024
+    }
+}

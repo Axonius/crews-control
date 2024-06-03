@@ -1,0 +1,66 @@
+settings:
+  output_results: true
+
+user_inputs:
+  dietary_restrictions:
+    title: "Dietary Restrictions"
+  preferred_flavors:
+    title: "Preferred Flavors"
+  diabetic_friendly:
+    title: "Diabetic Friendly"
+  cream_based:
+    title: "Cream Based"
+
+crews:
+  recipe_research_crew:
+    output_naming_template: 'ice-cream-recipes-{sha256:preferred_flavors}-{sha256:dietary_restrictions}.md'
+    agents:
+      recipe_research_agent:
+        role: "Recipe Research Analyst"
+        goal: >
+          Search for ice cream recipes that match the user's dietary restrictions, preferred flavors, and
+          specific requirements such as diabetic-friendly and cream-based options.
+        tools:
+          - serper
+          - website_search
+        backstory: >
+          An expert in culinary arts and nutrition with a knack for finding diverse recipes that cater to
+          specific dietary needs and taste preferences.
+    tasks:
+      find_ice_cream_recipes_task:
+        agent: recipe_research_agent
+        description: >
+          Search the internet for ice cream recipes that align with the user's dietary restrictions: "{dietary_restrictions}",
+          preferred flavors: "{preferred_flavors}", and specific requirements such as diabetic-friendly: "{diabetic_friendly}"
+          and cream-based: "{cream_based}" options.
+
+          Compile a list of recipes from various sources, ensuring they meet the criteria provided by the user.
+        expected_output: >
+          A curated list of ice cream recipes that meet the user's dietary restrictions, preferred flavors,
+          and specific requirements. Each recipe should include ingredients, instructions, and source information.
+
+  recipe_formatting_crew:
+    output_naming_template: 'formatted-ice-cream-recipes-{sha256:preferred_flavors}-{sha256:dietary_restrictions}.md'
+    agents:
+      formatting_agent:
+        role: "Recipe Formatter"
+        goal: >
+          Format the found ice cream recipes into a user-friendly document that is easy to read and follow.
+        backstory: >
+          A detail-oriented formatter with experience in creating visually appealing and easy-to-follow recipe guides.
+    tasks:
+      format_recipes_task:
+        agent: formatting_agent
+        description: >
+          Take the list of ice cream recipes provided by the Recipe Research Analyst and format them into a
+          user-friendly document. Include clear sections for ingredients, instructions, and any relevant notes
+          or tips for each recipe.
+
+          Ensure the document is visually appealing and easy to navigate, with options for printing or viewing on a device.
+
+          [LIST_OF_RECIPES]
+          {recipe_research_crew}
+          [/LIST_OF_RECIPES]
+        expected_output: >
+          A well-organized and formatted document containing the ice cream recipes, ready to be shared with
+          the user. The document should be clear, engaging, and suitable for both digital viewing and printing.

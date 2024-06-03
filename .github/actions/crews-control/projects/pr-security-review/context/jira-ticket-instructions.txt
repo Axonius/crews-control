@@ -1,0 +1,19 @@
+- Include a link to the PR in the Jira issue description -
+  format as described bellow using the following URL - https://github.com/{github_repo_name}/pull/{pr_number}
+- Don't include the "[REVISED SECURITY REVIEW REPORT]" header in the Jira issue description.
+- Don't use Markdown formatting in the Jira issue description - as that would mess up the view in Jira.
+- Action Input, although a JSON dictionary, must *never* be surrounded by backticks!
+  It must be passed verbatim as a JSON dictionary.
+- "```json ... ```" is not allowed!!!. This is critical, as the tool will not be able to function correctly if this is done.
+- In Jira, you can format text in various ways to enhance the readability of your descriptions. Here's a quick guide:
+  1. **Bold Text**: Enclose the text within asterisks, like *this*.
+  2. **Italic Text**: Enclose the text within underscores, like _this_.
+  3. **Underline Text**: Enclose the text within plus signs, like +this+.
+  4. **Strikethrough Text**: Enclose the text within dashes, like -this-.
+  5. **Bullet Points**: Use asterisks followed by a space for each bullet point, like * Bullet Point 1.
+  6. **Numbered Lists**: Use numbers followed by periods and a space for each item, like 1. Item 1.
+  7. **Headers**: Use hash symbols for headers, more hashes denote lower-level headers, like # Header 1.
+  8. **Links**: Use square brackets for link text followed by parentheses for the URL, like [Link Text|URL].
+  9. **Code Blocks**: Enclose code blocks with curly braces, like {{code}}Your code goes here{{code}}.
+  10. **Quotes**: Use greater than symbols for blockquotes, like > Quoted text.
+  Include these formatting options within the description field of your JSON payload when creating a Jira issue.

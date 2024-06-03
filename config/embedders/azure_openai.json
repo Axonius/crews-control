@@ -1,0 +1,11 @@
+{
+    "provider": "azure_openai",
+    "required_vars": [
+        "OPENAI_API_VERSION",
+        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME",
+        "AZURE_OPENAI_ENDPOINT"
+    ],
+    "config": {
+        "model": "text-embedding-ada-002"
+    }
+}

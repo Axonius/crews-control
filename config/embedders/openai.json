@@ -1,0 +1,10 @@
+{
+    "provider": "openai",
+    "required_vars": [
+        "OPENAI_API_VERSION",
+        "OPENAI_EMBEDDING_MODEL_NAME"
+    ],
+    "config": {
+        "model": "text-embedding-ada-002"
+    }
+}
