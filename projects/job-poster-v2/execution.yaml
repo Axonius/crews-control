@@ -128,7 +128,6 @@ crews:
         tools:
           - serper
           - website_search
-          - read_file
         backstory: >
           Skilled in crafting job descriptions that attract top talent by highlighting the company's
           unique culture, values, and benefits.
@@ -163,7 +162,6 @@ crews:
         tools:
           - serper
           - website_search
-          - read_file
         backstory: >
           A meticulous editor with an eye for detail, ensuring every piece of content is clear, engaging,
           and grammatically perfect.
@@ -180,6 +178,10 @@ crews:
           reflects the role's unique benefits and opportunities.
           
           Provide feedback for any necessary revisions.
+
+          [JOB_POSTING]
+          {draft_job_posting_crew}
+          [/JOB_POSTING]
         expected_output: >
           A polished, error-free job posting that is clear, engaging, and perfectly aligned with the
           company's culture and values.
