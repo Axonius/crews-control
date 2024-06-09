@@ -1,5 +1,12 @@
 # Crews Control
 
+## Acknowledgements
+
+This project builds upon the following MIT-licensed project:
+
+- crewAI: https://github.com/joaomdmoura/crewAI by João Moura | crewAI™, Inc.: https://github.com/joaomdmoura/
+  
+
 **Crews Control** is an abstraction layer on top of [crewAI](https://www.crewai.com/), designed to facilitate the creation and execution of AI-driven projects without writing code. By defining an `execution.yaml` file, users can orchestrate AI crews to accomplish complex tasks using predefined or custom tools.
 
 ## Features
@@ -10,6 +17,13 @@
 - **Templated Outputs:** Access outputs from previous crews’ tasks using a templating syntax.
 
 ## Licensing
+
+This repository includes the following files which are licensed under the GNU General Public License (GPL) Version 3:
+
+- `requirements.in`
+- `requirements.txt`
+
+The rest of the repository is licensed under the MIT License, which can be found in the `LICENSE` file.
 
 ### Legal Disclaimer
 This project and all information herein is provided “as-is” without any warranties or representations. Axonius relies on licenses published by third parties for dependencies and background for this project and therefore does not warrant that the licenses presented herein are correct. Licensees should perform their own assessment before using this project.
