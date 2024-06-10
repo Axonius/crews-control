@@ -64,14 +64,14 @@ crews:
       remove_code_block_markers:
         agent: software_engineer
         description: >
-          Remove the code block markers from the generated `execution.yaml` file for {bot_name}.
+          Remove the code block markers (if any) from the GENERATED_FILE.
           
           Any text before or after the code block markers should be removed, and the content within the code block markers
-          should be preserved.
+          shall be preserved.
           
-          Ensure that the final `execution.yaml` file does not contain any code block markers.
+          Ensure that the final output does not contain any code block markers.
 
-          [GENERATED_EXECUTION_YAML]
+          [GENERATED_FILE]
           {execution_yaml_generation}
-          [/GENERATED_EXECUTION_YAML]
-        expected_output: "A clean `execution.yaml` file without code block markers. The content should be verbatim."
+          [/GENERATED_FILE]
+        expected_output: "Verbatim content without any code block markers."
