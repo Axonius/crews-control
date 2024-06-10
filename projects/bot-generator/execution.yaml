@@ -50,3 +50,28 @@ crews:
           Engage with the human to ask for any specific requirements or details needed for the `execution.yaml` file.
         expected_output: "content of the `execution.yaml` file for {bot_name}."
 
+  code_block_marker_remover:
+    output_naming_template: 'final-{bot_name}-execution.yaml'
+    agents:
+      software_engineer:
+        role: "Software Engineer"
+        goal: "To remove code block markers from the generated execution.yaml."
+        backstory: >
+          You are a skilled Software Engineer with experience in parsing and manipulating text files.
+          You are proficient in Python programming and have a keen eye for detail.
+          Your expertise lies in data processing and text manipulation.
+    tasks:
+      remove_code_block_markers:
+        agent: software_engineer
+        description: >
+          Remove the code block markers from the generated `execution.yaml` file for {bot_name}.
+          
+          Any text before or after the code block markers should be removed, and the content within the code block markers
+          should be preserved.
+          
+          Ensure that the final `execution.yaml` file does not contain any code block markers.
+
+          [GENERATED_EXECUTION_YAML]
+          {execution_yaml_generation}
+          [/GENERATED_EXECUTION_YAML]
+        expected_output: "A clean `execution.yaml` file without code block markers. The content should be verbatim."
