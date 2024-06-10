@@ -51,6 +51,8 @@ crews:
         expected_output: "content of the `execution.yaml` file for {bot_name}."
 
   code_block_marker_remover:
+    depends_on:
+      - execution_yaml_generation
     output_naming_template: 'final-{bot_name}-execution.yaml'
     agents:
       software_engineer:
@@ -74,5 +76,6 @@ crews:
           [GENERATED_FILE]
           {execution_yaml_generation}
           [/GENERATED_FILE]
-        expected_output: "Verbatim content without any code block markers."
-
+        expected_output: >
+          Verbatim content without any code block markers and without the text before or after the code block markers.
+          Only the content within the code block markers shall be preserved (or the entire content if there were no code block markers).

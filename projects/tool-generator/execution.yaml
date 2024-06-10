@@ -81,3 +81,32 @@ crews:
         expected_output: >
           The complete tool code that follows the structure of the example tool in the provided context.
           The tool should be in python programming language.
+  code_block_marker_remover:
+    depends_on:
+      - tool_creation
+    output_naming_template: 'final-{tool_name}_tool.py'
+    agents:
+      software_engineer:
+        role: "Software Engineer"
+        goal: "To remove code block markers from the generated tool."
+        backstory: >
+          You are a skilled Software Engineer with experience in parsing and manipulating text files.
+          You are proficient in Python programming and have a keen eye for detail.
+          Your expertise lies in data processing and text manipulation.
+    tasks:
+      remove_code_block_markers:
+        agent: software_engineer
+        description: >
+          Remove the code block markers (if any) from the GENERATED_FILE.
+          
+          Any text before or after the code block markers should be removed, and the content within the code block markers
+          shall be preserved.
+          
+          Ensure that the final output does not contain any code block markers.
+
+          [GENERATED_FILE]
+          {tool_creation}
+          [/GENERATED_FILE]
+        expected_output: >
+          Verbatim content without any code block markers and without the text before or after the code block markers.
+          Only the content within the code block markers shall be preserved (or the entire content if there were no code block markers).
