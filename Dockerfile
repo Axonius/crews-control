@@ -1,5 +1,5 @@
 # Stage 1: Build and compile everything in a full Python image
-FROM python:3.12 as build
+FROM python:3.12.3 as build
 
 # Set the working directory in the container
 WORKDIR /app
@@ -37,7 +37,7 @@ USER appuser
 COPY . /app
 
 # Stage 2: Create a slim image for running the application
-FROM python:3.12-slim
+FROM python:3.12.3-slim
 
 # Copy user and group data
 COPY --from=build /etc/passwd /etc/passwd
