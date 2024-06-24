@@ -2,6 +2,7 @@ import os
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_openai import AzureChatOpenAI
 from langchain_groq import ChatGroq
+from langchain_anthropic import ChatAnthropic
 from langchain_community.embeddings import GPT4AllEmbeddings
 import json
 from pathlib import Path
@@ -43,6 +44,14 @@ def create_llm_client(config):
             streaming=config.get('stream', True),
             max_tokens=config.get('max_tokens', 8192),
             model_name=os.getenv('GROQ_MODEL_NAME'),
+        )
+    elif provider == 'anthropic':
+        return ChatAnthropic(
+            model=os.getenv("ANTHROPIC_MODEL_NAME"),
+            temperature=config.get('temperature', 0.7),
+            max_tokens=config.get('max_tokens', 1024),
+            timeout=None,
+            max_retries=2,
         )
     elif provider == 'azure_openai':
         return AzureChatOpenAI(

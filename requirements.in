@@ -11,4 +11,5 @@ sentence-transformers
 jira
 greenlet!=0.4.17
 langchain-groq
+langchain-anthropic
 # gpt4all # not available on pypi for arm64 linux
