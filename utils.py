@@ -56,7 +56,7 @@ def create_llm_client(config):
     elif provider == 'azure_openai':
         return AzureChatOpenAI(
             temperature=config.get('temperature', 0),
-            openai_api_version=os.getenv("OPENAI_API_VERSION"),
+            openai_api_version=os.getenv("AZURE_OPENAI_VERSION"),
             azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
             azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),

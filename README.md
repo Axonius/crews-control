@@ -82,6 +82,7 @@ pip-compile --generate-hashes requirements.in
 
 4. Install the dependencies:
 ```bash
+pip install setuptools
 pip install --require-hashes --no-cache-dir -r requirements.txt
 ```
 
