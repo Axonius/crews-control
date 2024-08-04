@@ -42,8 +42,6 @@ The `requirements.in` and `requirements.txt` files, which list the dependencies 
 
 3. Environment variables listed in [.env.example](.env.example)
 
-Sure, here is the suggested section to add to your README:
-
 ### Environment Setup
 
 The project requires certain environment variables to function correctly. These variables are listed in the `.env.example` file. To configure these variables, follow these steps:
