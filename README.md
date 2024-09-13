@@ -89,7 +89,7 @@ pip install --require-hashes --no-cache-dir -r requirements.txt
 **Run a project (interactive-mode):**
 
 ```bash
-make run_it project_name=<PROJECT_TO_RUN>
+make run-it PROJECT_NAME=<PROJECT_TO_RUN>
 ```
 
 **Run a project (cli-mode):**
@@ -128,7 +128,7 @@ make build
 
 **Run a project (interactive-mode):**
 ```bash
-make run_it project_name=<PROJECT_TO_RUN>
+make run-it PROJECT_NAME=<PROJECT_TO_RUN>
 ```
 **Run a project (cli-mode):**
 ```bash
@@ -285,7 +285,7 @@ Interactive mode prompts the user for inputs interactively, rather than requirin
 To start a project in interactive mode, use the following command:
 
 ```sh
-make run_it PROJECT_NAME=<your_project_name>
+make run-it PROJECT_NAME=<your_project_name>
 ```
 
 Ensure you have set up the project and provided the necessary project name.
