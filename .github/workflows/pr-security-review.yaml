@@ -75,13 +75,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload output files
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # actions/upload-artifact@v2
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # actions/upload-artifact@v4
         with:
           name: output
           path: ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/output
 
       - name: Upload validations files
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # actions/upload-artifact@v2
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # actions/upload-artifact@v4
         with:
           name: validations
           path: ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/validations
