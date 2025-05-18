@@ -9,6 +9,10 @@ on:
     types:
       - closed
 
+permissions:
+  contents: read
+  id-token: write
+
 env:
   CREWS_CONTROL_ACTION_TAG_NAME: ${{ secrets.CREWS_CONTROL_ACTION_TAG_NAME }}
 
@@ -34,10 +38,21 @@ jobs:
           chmod -R 777 ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/output
           chmod -R 777 ${{ github.workspace }}/images/crews-control-action/projects/pr-security-review/validations
         working-directory: ${{ github.workspace }}
-      
+
+      - name: Prepare session name, AWS Account, and Assume Role
+        run: |
+          AX_AWS_ACCOUNT="$(aws sts get-caller-identity --query "Account" --output text)"
+          SHORT_REPO_NAME="$(echo ${{ github.repository }} | cut -d'/' -f2)"
+          echo "AX_AWS_ACCOUNT=${AX_AWS_ACCOUNT}" >> $GITHUB_ENV
+          echo "SHORT_REPO_NAME=${SHORT_REPO_NAME}" >> $GITHUB_ENV
+          echo "SESSION_NAME=${SHORT_REPO_NAME}_$(echo ${{ github.ref_name }}|tr '/' '-'| head -c 25)_${{ github.run_id }}" >> $GITHUB_ENV
+          echo "OIDC_ASSUME_ROLE=arn:aws:iam::${AX_AWS_ACCOUNT}:role/oidc-gha-${SHORT_REPO_NAME}-all" >> $GITHUB_ENV
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # aws-actions/configure-aws-credentials@v1
         with:
+          role-to-assume: ${{ env.OIDC_ASSUME_ROLE }}
+          role-session-name: ${{ env.SESSION_NAME }}
           aws-region: ${{ secrets.ECR_AWS_REGION }}
 
       - name: Login to Amazon ECR
