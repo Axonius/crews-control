@@ -9,10 +9,6 @@ on:
     types:
       - closed
 
-permissions:
-  contents: read
-  id-token: write
-
 env:
   CREWS_CONTROL_ACTION_TAG_NAME: ${{ secrets.CREWS_CONTROL_ACTION_TAG_NAME }}
 
@@ -20,6 +16,9 @@ jobs:
   run-ecr-image:
     if: github.event.pull_request.merged == true
     runs-on: [self-hosted-common-strong]
+    permissions:
+      contents: read
+      id-token: write
     environment:
       name: crews-control
     steps:
