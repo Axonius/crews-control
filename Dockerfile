@@ -1,5 +1,5 @@
 # Stage 1: Build and compile everything in a full Python image
-FROM python:3.12.3 as build
+FROM python:3.12.3 AS build
 
 # Set the working directory in the container
 WORKDIR /app
@@ -61,5 +61,5 @@ RUN mkdir -p /home/appuser && \
 WORKDIR /app
 USER appuser
 
-ENTRYPOINT [ "python", "crews_control.py" ]
+ENTRYPOINT [ "python", "-u", "crews_control.py" ]
 CMD []

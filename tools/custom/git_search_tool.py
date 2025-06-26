@@ -1,5 +1,5 @@
 import subprocess
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from pathlib import Path
 class GitSearchTool(BaseTool):
     """A tool that searches for a query string within a local git repository."""

@@ -1,5 +1,6 @@
 h1. Repository: {repo-name}
-h1. Pull Request: {pr-number} (this should be a link to the PR)
+
+h1. Pull Request: {pr-number} (this should be a link to the PR - formatting a link is done like this: [link text|URL] (*never* do the opposite [URL|Link text]); Link text should be the PR number and the URL should be the link to the PR)
 
 h3. Title: {title}
 

@@ -8,5 +8,6 @@ execution/**/__pycache__/**
 tools/__pycache__/**
 tools/**/__pycache__/**
 projects/**/output/**
+projects/**/output.*/**
 projects/**/validations/**
 db/**

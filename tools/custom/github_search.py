@@ -1,4 +1,4 @@
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from github import Github, GithubException
 import os
 import time
@@ -44,6 +44,9 @@ Use this tool to search for specific query terms within a file in a GitHub repos
 6. **Extension Qualifiers:**
    - Search for files with a specific extension. Example: `"icon size:>200000 extension:css"`
 
+7. **Quotes:**
+    - Use quotes to search for special characters. Examples: `"SOME_CONSTANT"`
+
 **Examples:**
 - **Simple Search:** `"COPY filename:Dockerfile repo:Axonius/crews-control"`
 - **Complex Search:** `"COPY in:file filename:Dockerfile path:/src repo:Axonius/crews-control"`
@@ -69,6 +72,8 @@ Use this tool to search for specific query terms within a file in a GitHub repos
             if search_result.totalCount > 10:
                 error_message = 'Too many results. Please narrow down the search. Returning without file content.'
                 for item in search_result:
+                    if len(code_results) >= 10:
+                        break
                     if item.path.endswith('.py'):
                         classes, methods = self.parse_python_code('')
                     else:

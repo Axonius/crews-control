@@ -2,6 +2,9 @@ from pathlib import Path
 
 import rich
 import yaml
+from typing import Union
+from crewai.crews.crew_output import CrewOutput
+from execution.condition_evaluator import evaluate_condition_block
 
 from execution.consts import EXECUTION_CONFIG_PATH
 from execution.crews.builder import CrewRunner
@@ -12,6 +15,45 @@ from utils import is_safe_path
 import os
 from utils import validate_env_vars
 validate_env_vars('LLM_NAME', 'EMBEDDER_NAME')
+
+def _evaluate_dependency_conditions(dependency_block: any, crews_results: dict) -> bool:
+    """
+    Recursively evaluates the dependency conditions based on a structured result object.
+    This function handles logical operators (and, or) by recursively calling itself,
+    and delegates single-crew condition evaluation to evaluate_condition_block from condition_evaluator.
+    """
+    if not dependency_block:
+        return True
+
+    # Base Case 1: A single string dependency (for backward compatibility: e.g., "crew_name")
+    # This implicitly means the crew must have succeeded.
+    if isinstance(dependency_block, str):
+        return evaluate_condition_block({'crew': dependency_block, 'status': 'SUCCESS'}, crews_results)
+
+    if isinstance(dependency_block, dict):
+        # Case 2: A single crew with an optional condition (e.g., {'crew': 'name', 'condition': {...}})
+        if 'crew' in dependency_block:
+            # Combine the base 'crew' with its optional 'condition' block
+            combined_condition = {'crew': dependency_block['crew']}
+            combined_condition.update(dependency_block.get('condition', {})) # Add explicit conditions
+            return evaluate_condition_block(combined_condition, crews_results)
+
+        # Recursive Step: A logical operator block (e.g., 'and' or 'or')
+        if 'and' in dependency_block:
+            # All operands in the 'and' list must evaluate to True
+            return all(_evaluate_dependency_conditions(op, crews_results) for op in dependency_block['and'])
+
+        if 'or' in dependency_block:
+            # At least one operand in the 'or' list must evaluate to True
+            return any(_evaluate_dependency_conditions(op, crews_results) for op in dependency_block['or'])
+
+    if isinstance(dependency_block, list): # Backward compatibility for old list format (implicit AND)
+        # All items in the list must evaluate to True
+        return all(_evaluate_dependency_conditions(op, crews_results) for op in dependency_block)
+
+    # Should not reach here if the dependency structure is valid and adheres to expected formats.
+    # Return False for safety if an unhandled structure is encountered.
+    return False
 
 def execute_crews(project_name: str,
                   user_inputs: dict = None,
@@ -42,20 +84,68 @@ def execute_crews(project_name: str,
     crews_results: dict = {}
     for acting_crew in execution_order:
         crew_config: dict = execution_config['crews'][acting_crew]
+        dependencies = crew_config.get('depends_on')
+
+        if dependencies:
+            should_run = _evaluate_dependency_conditions(dependencies, crews_results)
+            if not should_run:
+                rich.print(f"[yellow bold]Skipping crew <{acting_crew}> due to unmet dependency conditions.[/yellow bold]")
+                # Populate the structured result for the skipped crew
+                crews_results[acting_crew] = {
+                    "status": "SKIPPED",
+                    "output": f"Execution skipped because dependency conditions for crew '{acting_crew}' were not met."
+                }
+                continue
+
         rich.print(f"[white bold]Running crew <{acting_crew}> [/white bold]")
-        result: str = CrewRunner(
-            project_name=project_name,
-            crew_name=acting_crew,
-            crew_config=crew_config,
-            user_inputs=user_inputs,
-            previous_crews_results=crews_results,
-            llm=llm,
-            embedding_model=embedding_model,
-            should_export_results=(execution_config.get('settings') or {}).get('output_results'),
-            ignore_cache=ignore_cache,
-        ).run_crew()
-        crews_results[acting_crew] = result
+        try:
+            crew_run_raw_or_obj_result: Union[CrewOutput, str] = CrewRunner(
+                project_name=project_name,
+                crew_name=acting_crew,
+                crew_config=crew_config,
+                user_inputs=user_inputs,
+                previous_crews_results=crews_results, # Pass the full structured results
+                llm=llm,
+                embedding_model=embedding_model,
+                should_export_results=(execution_config.get('settings') or {}).get('output_results'),
+                ignore_cache=ignore_cache,
+                guardrail_verbose_logging=True,
+
+            ).run_crew()
+            if isinstance(crew_run_raw_or_obj_result, CrewOutput):
+                # If it's a CrewOutput object, get its raw string content
+                result_output: str = crew_run_raw_or_obj_result.raw
+            else:
+                # Otherwise, it's already a string (from cache, or an error message string)
+                result_output: str = str(crew_run_raw_or_obj_result) # Ensure it's a string just in case
+            # Wrap the successful result in the new structure
+            crews_results[acting_crew] = {
+                "status": "SUCCESS",
+                "output": result_output
+            }
+
+        except Exception as e:
+            # Handle unexpected failures during crew execution
+            rich.print(f"[bold red]An unexpected error occurred while running crew <{acting_crew}>: {e}[/bold red]")
+            crews_results[acting_crew] = {
+                "status": "FAILED",
+                "output": str(e)
+            }
+            if os.getenv('EXIT_ON_ERROR', 'False').lower() == 'true':
+                os._exit(1)
+
         if validations and acting_crew in validations:
+            # First, ensure the crew we want to validate was actually successful
+            crew_result_obj = crews_results.get(acting_crew, {})
+            if crew_result_obj.get('status') != 'SUCCESS':
+                rich.print(
+                    f"[yellow]Skipping validation for crew <{acting_crew}> because its status was '{crew_result_obj.get('status', 'UNKNOWN')}'.[/yellow]"
+                )
+                continue  # Continue to the next crew in the execution order
+            # It was successful, so proceed with validation.
+            # IMPORTANT: The 'result' used below must be the raw output string.
+            result_for_validation = crew_result_obj['output']
+
             from crewai import Task, Agent, Crew
             import textwrap
             validations_compare_to = validations[acting_crew]['compare_to']
@@ -116,7 +206,7 @@ def execute_crews(project_name: str,
                     compare the result with the expected output and indicate for each check if it succeeded or not.
 
                     <<<<RESULT_START_MARKER>>>>
-                    {result}
+                    {result_for_validation}
                     <<<<RESULT_END_MARKER>>>>
 
                     <<<<EXPECTED_OUTPUT_START_MARKER>>>>
@@ -145,7 +235,7 @@ def execute_crews(project_name: str,
             crew = Crew(
                 agents = [agent],
                 tasks = [task],
-                verbose = 2,
+                verbose = True,
             )
             validation_result = crew.kickoff()
             if not validation_results_filename.parent.exists():
@@ -158,7 +248,7 @@ def execute_crews(project_name: str,
                 os._exit(1)
 
             with open(validation_results_filename, 'w') as file:
-                file.write(validation_result)
+                file.write(validation_result.raw)
 
 
 def get_execution_config(project_name: str) -> dict:

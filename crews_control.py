@@ -1,10 +1,26 @@
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
+
+# Don't show "WARNING: SDK is disabled." messages from opentelemetry
+import logging
+import os
+#
+# logging.basicConfig(level=logging.INFO)
+#
+if os.getenv("OTEL_SDK_DISABLED"):
+    logging.getLogger('opentelemetry.sdk.trace').addFilter(
+        lambda record: "SDK is disabled." not in record.getMessage()
+    )
+# Don't show 'Overriding of current TracerProvider is not allowed'
+class IgnoreTracerProviderFilter(logging.Filter):
+    def filter(self, record):
+        return record.getMessage() != 'Overriding of current TracerProvider is not allowed'
+        
+logging.getLogger('opentelemetry.trace').addFilter(IgnoreTracerProviderFilter())
 
 import argparse
 import rich
 from rich.padding import Padding
-import os
 from execution.inputs import get_user_inputs, validate_user_inputs
 from execution.orchestrator import execute_crews, get_execution_config
 from models import RuntimeSettings

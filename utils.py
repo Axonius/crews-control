@@ -54,12 +54,13 @@ def create_llm_client(config):
             max_retries=2,
         )
     elif provider == 'azure_openai':
-        return AzureChatOpenAI(
-            temperature=config.get('temperature', 0),
-            openai_api_version=os.getenv("AZURE_OPENAI_VERSION"),
-            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+        from crewai import LLM
+        return LLM(
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_version=os.getenv("AZURE_OPENAI_VERSION"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            azure=True
         )
     elif provider == 'openai':
         from langchain_openai import ChatOpenAI
@@ -97,10 +98,16 @@ def create_embedder_client(config):
         )
         validate_env_vars(config['required_vars'])
         return AzureOpenAIEmbeddings(
+            # # Set up your environment variables (or pass them directly to the model)
+            # export AZURE_OPENAI_API_KEY="your-api-key"
+            # export AZURE_OPENAI_ENDPOINT="https://<your-endpoint>.openai.azure.com/"
+            # export AZURE_OPENAI_API_VERSION="2024-02-01"
             azure_deployment=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"),
-            openai_api_version=os.getenv("OPENAI_API_VERSION"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            openai_api_version=os.getenv("AZURE_OPENAI_VERSION"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
+            # api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_openai_api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_openai_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
         )
     elif provider == 'huggingface':
         import warnings
@@ -163,10 +170,9 @@ def get_embedchain_settings(task_id: str, llm_name: str, embedder_name: str) -> 
 
     if llm_name == 'azure_openai':
         llm, embedder = get_clients(llm_name=llm_name, embedder_name=embedder_name)
-        llm_config['config']['deployment_name'] = getattr(llm, 'deployment_name')
-        llm_config['config']['api_key'] = getattr(llm, 'openai_api_key')
+        llm_config['config']['api_key'] = getattr(llm, 'api_key')
         embedder_config['config']['deployment_name'] = getattr(embedder, 'deployment')
-        embedder_config['config']['api_key'] = getattr(embedder, 'openai_api_key')
+        embedder_config['config']['api_key'] = getattr(embedder, 'openai_api_key')._secret_value
     elif llm_name == 'openai':
         llm, embedder = get_clients(llm_name=llm_name, embedder_name=embedder_name)
         llm_config['config']['api_key'] = getattr(llm, 'openai_api_key')

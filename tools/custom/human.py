@@ -3,7 +3,7 @@
 
 from typing import Callable
 from pydantic import Field
-from langchain.tools.base import BaseTool
+from crewai.tools import BaseTool
 
 
 def _print_func(text: str) -> None:
@@ -24,8 +24,8 @@ def input_func() -> str:
 class HumanTool(BaseTool):
     """Tool that adds the capability to ask user for multi line input."""
 
-    name = "HumanTool"
-    description = (
+    name: str = "HumanTool"
+    description: str = (
         "You can ask a human for guidance when you think you"
         " got stuck or you are not sure what to do next."
         " The input should be a question for the human."

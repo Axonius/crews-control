@@ -1,6 +1,6 @@
 from typing import Type, Any
 from pydantic.v1 import BaseModel, Field
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from github import Github
 import requests
 import os
@@ -13,6 +13,35 @@ class GitHubPRDetailsSchema(BaseModel):
 class GitHubPRDetailsTool(BaseTool):
     name: str = "Fetch GitHub PR Details"
     description: str = "A tool that fetches details of a specific pull request from GitHub."
+    args_schema: Type[BaseModel] = GitHubPRDetailsSchema
+    gh_repo: str = "default/repo"  # Default GitHub repository
+    pr_number: int = 1             # Default PR number
+
+    def _run(self, **kwargs: Any) -> Any:
+        # Fetching GitHub repository and PR number from the provided arguments or defaults
+        gh_repo = kwargs.get('gh_repo', self.gh_repo)
+        pr_number = kwargs.get('pr_number', self.pr_number)
+
+        # Initializing GitHub client with an environment variable token
+        gh = Github(os.getenv('GITHUB_TOKEN'))
+        
+        # Getting the repository and pull request
+        repo = gh.get_repo(gh_repo)
+        pr = repo.get_pull(pr_number)
+
+        # Constructing the details of the pull request
+        pr_details = {
+            'title': pr.title,
+            'description': pr.body,
+            'comments': [{'user': comment.user.login, 'body': comment.body} for comment in pr.get_issue_comments()],
+            'review_comments': [{'user': comment.user.login, 'body': comment.body} for comment in pr.get_review_comments()]
+        }
+
+        return pr_details
+
+class GitHubPRDiffTool(BaseTool):
+    name: str = "Fetch GitHub PR Diff"
+    description: str = "A tool that fetches code diff of a specific pull request from GitHub."
     args_schema: Type[BaseModel] = GitHubPRDetailsSchema
     gh_repo: str = "default/repo"  # Default GitHub repository
     pr_number: int = 1             # Default PR number
@@ -60,13 +89,14 @@ class GitHubPRDetailsTool(BaseTool):
             diff_content = f"Failed to fetch diff: HTTP {diff_response.status_code} - {diff_response.reason}"
 
         # Constructing the details of the pull request
+        # limit returned diff content to 64k TBD: set limit as a parameter
+        MAX_DIFF_CONTENT_LENGTH = 64000
+        if len(diff_content) > MAX_DIFF_CONTENT_LENGTH:
+            diff_content = diff_content[:MAX_DIFF_CONTENT_LENGTH] + \
+            f'...Content truncated due to size (over {MAX_DIFF_CONTENT_LENGTH}).'
         pr_details = {
-            'title': pr.title,
-            'description': pr.body,
             'diff_url': pr.diff_url,
             'diff_content': diff_content,
-            'comments': [{'user': comment.user.login, 'body': comment.body} for comment in pr.get_issue_comments()],
-            'review_comments': [{'user': comment.user.login, 'body': comment.body} for comment in pr.get_review_comments()]
         }
 
         return pr_details

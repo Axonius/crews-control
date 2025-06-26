@@ -1,53 +1,45 @@
-import os
-from crewai_tools import BaseTool
-from utils import get_embedchain_settings
-from embedchain import App
-from typing import Optional
+# https://github.com/langchain-ai/langchain/commit/4c087e2bf77c520f300a5cec5424660ad740f41f
+"""Tool for asking human input."""
 
-class WebsiteContentQueryTool(BaseTool):
-    """A tool that fetches website content, adds it to a vector database, and queries it."""
-    name: str = "WebsiteContentQueryTool"
-    app: Optional[App] = None
-    description: str = (
-        "This tool fetches the content of a website, adds it to a vector database, and queries the vector database for a given query string."
-    )
-    class Config:
-        arbitrary_types_allowed = True
+from typing import Callable
+from pydantic import Field
+from crewai.tools import BaseTool
 
-    def __init__(self, app: 'App', **kwargs):
-        super().__init__(**kwargs)
-        if app and isinstance(app, App):
-            self.app = app
 
-    def _run(self, url: str, query: str) -> str:
-        """Use the WebsiteContentQueryTool."""
-        return self.query_website_content(url=url, query=query)
+def _print_func(text: str) -> None:
+    print("\n")
+    print(text)
 
-    def query_website_content(self, url: str, query: str) -> str:
-        """
-        Fetches the content of a website, adds it to a vector database, and queries the vector database for a given query string.
-
-        Parameters:
-        url (str): The URL of the website to fetch content from.
-        query (str): The query string to search in the vector database.
-
-        Returns:
-        str: The result from the vector database query.
-
-        Raises:
-        Exception: If there is an issue with fetching website content or querying the vector database.
-        """
-        # Fetch the content of the website
+def input_func() -> str:
+    print("Insert your text. Press Ctrl-D (or Ctrl-Z on Windows) to end.")
+    contents = []
+    while True:
         try:
-            if not self.app:
-                config = get_embedchain_settings(task_id='shared',
-                                                 llm_name=os.getenv('LLM_NAME'),
-                                                 embedder_name=os.getenv('EMBEDDER_NAME'))
-                self.app = App.from_config(config=config)
-            self.app.add(url, data_type='web_page')
-            results = self.app.query(query)
-        except Exception as e:
-            raise Exception(f"Failed to fetch website content: {e}")
+            line = input()
+        except EOFError:
+            break
+        contents.append(line)
+    return "\n".join(contents)
 
-        # Return the result from the vector database
-        return str(results)
+class HumanTool(BaseTool):
+    """Tool that adds the capability to ask user for multi line input."""
+
+    name: str = "HumanTool"
+    description: str = (
+        "You can ask a human for guidance when you think you"
+        " got stuck or you are not sure what to do next."
+        " The input should be a question for the human."
+        " This tool version is suitable when you need answers that span over"
+        " several lines."
+    )
+    prompt_func: Callable[[str], None] = _print_func
+    input_func: Callable[[], str] = input_func
+
+    def _run(self, query: str) -> str:
+        """Use the Multi Line Human input tool."""
+        self.prompt_func(query)
+        return self.input_func()
+
+    async def _arun(self, query: str) -> str:
+        """Use the Multi Line Human tool asynchronously."""
+        raise NotImplementedError("Human tool does not support async")

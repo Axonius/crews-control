@@ -1,5 +1,8 @@
-crewai[tools]
-embedchain
+# crewai>=0.105.0
+# crewai-tools>=0.37.0
+# git+https://github.com/joaomdmoura/crewai.git@main#egg=crewai
+# git+https://github.com/joaomdmoura/crewai-tools.git@main#egg=crewai-tools
+crewai>=0.134.0
 duckduckgo-search
 atlassian-python-api
 pytesseract
@@ -12,4 +15,10 @@ jira
 greenlet!=0.4.17
 langchain-groq
 langchain-anthropic
-# gpt4all # not available on pypi for arm64 linux
+PyGithub
+transformers==4.52.4
+jinja2==3.1.6
+langchain_openai
+langchain_community
+python-magic
+boto3
