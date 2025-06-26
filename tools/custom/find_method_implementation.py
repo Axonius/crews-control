@@ -1,5 +1,5 @@
 from typing import Type, Any
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from pydantic.v1 import BaseModel, Field
 from github import Github, Repository
 import os

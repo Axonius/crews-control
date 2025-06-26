@@ -1,5 +1,5 @@
 import subprocess
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from pathlib import Path
 class GitFileContentQueryTool(BaseTool):
     """A tool that fetches file content from a local git repository."""

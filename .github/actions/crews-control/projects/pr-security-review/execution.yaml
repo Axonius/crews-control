@@ -21,7 +21,8 @@ crews:
           You will analyze the code diff in the PR {pr_number} of the {github_repo_name} repository, search for potential security flaws,
           and verify the implementation against best practices.
         tools:
-          - fetch_pr_content
+          - fetch_pr_details
+          - fetch_pr_diff
           - github_search
       jira_specialist:
         role: "Jira Specialist"
@@ -30,7 +31,7 @@ crews:
           As a Jira Specialist, your role is to gather context about the PR by fetching relevant details from the associated Jira ticket. This information will help in understanding the intent behind the code changes.
         tools:
           - jql_query
-          - fetch_pr_content
+          - fetch_pr_details
 
     tasks:
       fetch_jira_details:
@@ -73,7 +74,8 @@ crews:
           As a Security Analyst, your role is to address any concerns or recommendations or mitigations, etc, raised in the security review
           report and amend the report to provide a final security assessment of the PR.
         tools:
-          - fetch_pr_content
+          - fetch_pr_details
+          - fetch_pr_diff
           - github_search
           - FindMethodImplementationTool
     tasks:

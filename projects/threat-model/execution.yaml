@@ -1,0 +1,1045 @@
+settings:
+  output_results: true
+
+user_inputs:
+  jira_ticket_id:
+    title: "Jira Ticket ID"
+    description: "The ID of the Jira ticket containing the feature description"
+
+crews:
+  JiraTicketFetcherCrew:
+    output_naming_template: '{jira_ticket_id}_1_JiraTicketFetcherCrew.md'
+    agents:
+      jira_fetch_agent:
+        role: "Jira Ticket Content Retriever"
+        goal: "Retrieve comprehensive details (key, summary, description, links, parent, children if epic) for a given Jira ticket ID and output them as a JSON string."
+        tools:
+          - name: jira_get_issue_details
+            result_as_answer: true
+          custom_field_names_to_fetch:
+            - "Team"          # Example: Add the custom fields you want to fetch
+            - "Target Version"
+          epic_issue_type_names:
+            - "Epic"          # Example: List all names your Jira instance uses for epics
+            - "Initiative"
+        backstory: >
+          Specialized in fetching detailed information from Jira tickets using their ID.
+          Provides a complete JSON representation of the ticket for downstream processing.
+    tasks:
+      fetch_initial_ticket_data:
+        agent: jira_fetch_agent
+        description: "Your only objective is to call the `JiraTicketDetailsTool` for the Jira ticket `{jira_ticket_id}`. You must then immediately return the raw, unmodified output from the tool as your Final Answer. Do not add any commentary or use any other tools."
+        expected_output: "The raw, unmodified JSON string that is returned directly from the `JiraTicketDetailsTool`."
+  PrimaryTicketImageAnalysisCrew:
+    depends_on:
+      - JiraTicketFetcherCrew
+    output_naming_template: '{jira_ticket_id}_2_PrimaryTicketImageAnalysisCrew.md'
+    agents:
+      primary_image_agent:
+        role: "Image Analyzer for Primary Jira Ticket Content"
+        goal: >
+          Extract image filenames from the provided Jira ticket's description,
+          analyze each image using the Advanced Image Analyzer tool, and return a structured
+          JSON output of the analyses.
+        tools:
+          - image_analyzer_tool
+        backstory: >
+          Focuses on visual content within a specific Jira ticket's description.
+          Capable of parsing Jira image markup to extract filenames.
+          Uses the Advanced Image Analyzer tool to get detailed descriptions and PlantUML.
+    tasks:
+      analyze_images_from_primary_ticket_description:
+        guardrail_type: "generic_agent_validator"
+        agent: primary_image_agent
+        description: >
+          The input for this task is the JSON output string from `JiraTicketFetcherCrew`:
+          [JiraTicketFetcherCrew]
+          {JiraTicketFetcherCrew}
+          [/JiraTicketFetcherCrew]
+
+          1. From the 'description' field of the ticket in the input, find all image filenames (e.g., those ending in .png, .jpg, .gif).
+          2. For each filename found, construct a self-contained Jira URI in the format: `jira://TICKET_KEY/FILENAME`. Use the ticket's 'key' for the TICKET_KEY part.
+          3. Combine all the constructed Jira URIs into a single, newline-separated string. If no images are found, this will be an empty string.
+          4. If the string from step 3 is not empty, invoke the `Advanced Image Analyzer` tool ONCE with the following arguments:
+            - `image_references`: The complete, newline-separated string of all Jira URIs.
+            - `analysis_prompt`: "Analyze the provided image in extreme detail. Describe all visible elements, including text, icons, structures, and their spatial relationships. Identify the type of image (e.g., UI mockup, photo, flowchart, architecture diagram, UML diagram). If the image contains UI elements, describe their appearance and potential function. Note any visible text content exactly. Identify any potential visual indicators relevant to security (e.g., locks, warning signs, sensitive data fields). If the image is a diagram (like UML, flowchart, architecture, sequence, etc.), **first, fully describe in text** all components, symbols, connectors, labels, and directional flows. Ensure the textual description captures all relationships between entities with enough detail to enable someone to recreate the diagram accurately from the text. Include every discernible detail. **Second, if the image is identifiable as a diagram type suitable for PlantUML (e.g., sequence, class, use case, activity, component, state), generate its representation using PlantUML syntax enclosed within ```plantuml code blocks.**"
+          5. The output from the tool will be a single string containing the analysis for all images. Process this string to create the final list of JSON objects as described in the `expected_output`.
+
+          Take the single string output returned by the Advanced Image Analyzer tool. This string contains the analysis for all images. Use it to create the final list of JSON objects as described in the expected_output. It is understood that this is a difficult task and your output may not be comprehensive and that's OK - you are doing your best.
+        expected_output: >
+          A raw list of JSON objects mapping image filenames extracted from the primary ticket's description to their analysis results.
+          If no images are found, an empty JSON object list should be returned. Here is the expected format:
+
+          [{{source_id: '<The ticket id where the image is referenced>', image_reference: '<The extracted `filename.ext`>', analysis_text:'<analsys result of the image>', plantuml_code:'<representation using PlantUML>'}}, ...]
+
+          Note to validator: It is ok if there isn't an object for every image in the input - it is understood that this is done on a best-effort basis.
+
+  InitialFeatureConsolidationCrew:
+    depends_on:
+      - JiraTicketFetcherCrew
+      - PrimaryTicketImageAnalysisCrew
+    output_naming_template: '{jira_ticket_id}_3_InitialFeatureConsolidationCrew.md'
+    agents:
+      initial_consolidation_agent:
+        role: "Primary Feature Content Consolidator"
+        goal: "Integrate fetched Jira ticket content with its image analysis results into a cohesive description."
+        backstory: >
+          This agent takes the raw structured data from a Jira ticket and the analyses of images found
+          directly within that ticket's description. It carefully merges these two pieces of information
+          to create an enriched version of the feature description.
+    tasks:
+      consolidate_primary_ticket_with_its_images:
+        agent: initial_consolidation_agent
+        description: >
+          You will receive two JSON string inputs:
+          Input 1 (from `JiraTicketFetcherCrew`): JSON with original Jira ticket data (must contain 'key', 'summary', 'description').
+          Input 2 (from `PrimaryTicketImageAnalysisCrew`): JSON mapping image filenames to their analysis results/errors.
+
+          Inputs:
+          -------
+          [JiraTicketFetcherCrew]
+          {JiraTicketFetcherCrew}
+          [/JiraTicketFetcherCrew]
+
+          [PrimaryTicketImageAnalysisCrew]
+          {PrimaryTicketImageAnalysisCrew}
+          [/PrimaryTicketImageAnalysisCrew]
+          -------
+
+          1. Create an `integrated_description`. Start with the original Jira 'description'.
+          2. For each image filename and its analysis/error found in Input 2:
+            Attempt to locate the image reference (e.g., `!filename.ext!`) in the `integrated_description`.
+            If found, append the image's analysis (or error message) immediately after its reference.
+            If not found (or to ensure it's always included), append it at the end of the description.
+            Clearly label it, e.g., "\n\n[Analysis of image-filename.ext]:\n<analysis_text_here>\n<plantuml_code_here_if_any>\n"
+            or "\n\n[Analysis of image-filename.ext]: Failed - <error_message_here>\n".
+          3. Output a JSON object containing: 'ticket_key', 'summary', and the 'integrated_description'.
+        expected_output: >
+          A JSON string representing an object with three keys: 'ticket_key', 'summary', and 'integrated_description'.
+          The 'integrated_description' will be the original Jira description with primary image analysis results
+          integrated.
+
+  LinkedResourceFetcherAndAnalyzerCrew:
+    depends_on:
+      - InitialFeatureConsolidationCrew
+    output_naming_template: '{jira_ticket_id}_4_LinkedResourceFetcherAndAnalyzerCrew.md'
+    agents:
+      linked_content_agent:
+        role: "Linked Document and Image Processor"
+        goal: >
+          Identify, fetch, and analyze content and images from Jira issues (excluding 'PROJB-' prefixed keys)
+          and Confluence pages linked within provided text.
+        tools:
+          - name: jira_get_issue_details
+          custom_field_names_to_fetch:
+            - "Team"
+            - "Target Version"
+          epic_issue_type_names:
+            - "Epic"          # Example: List all names your Jira instance uses for epics
+            - "Initiative"
+          - confluence
+          - image_analyzer_tool
+        backstory: >
+          Expert at navigating through linked documentation. Parses text to find URLs or explicit Jira keys/Confluence Page IDs.
+          Retrieves content from these linked sources, filters out specified Jira projects,
+          then scans for and analyzes any images found within these secondary documents.
+    tasks:
+      fetch_and_analyze_linked_resources_content:
+        agent: linked_content_agent
+        description: >
+          Input: JSON output from `InitialFeatureConsolidationCrew` (containing 'ticket_key', 'summary', 'integrated_description'):
+
+          [InitialFeatureConsolidationCrew]
+          {InitialFeatureConsolidationCrew}
+          [/InitialFeatureConsolidationCrew]
+
+          1. **Process Pre-fetched Jira Issues:**
+            a. From the `JiraTicketFetcherCrew` input, directly access the list of linked tickets. You DO NOT need to parse the description to find Jira keys; this has been done for you by the tool.
+            b. Iterate through this list of pre-fetched linked Jira issues.
+
+          2. **Process Linked Confluence Pages:**
+            a. From the `InitialFeatureConsolidationCrew` input's `integrated_description`, identify any unique URLs pointing to Confluence pages.
+            b. For each Confluence page found, fetch its content using the `ConfluenceDataQueryTool`.
+
+          3. **For EVERY resource (both the pre-fetched Jira issues and the manually fetched Confluence pages):**
+            a. **Special Handling for "PROJB-" Jira Tickets:** If a resource is a Jira issue and its key begins with "PROJB-", create a skip entry and do not proceed further with it.
+            b. **Image Analysis (if content is available):**
+                i. Scan the content (Jira 'description' or Confluence HTML) to find all image references.
+                ii. Construct the full URI for each image (`jira://KEY/FILE` or `confluence://ID/FILE`).
+            
+          4. **Consolidated Image Analysis:**
+            a. After processing ALL resources, collect ALL the image URIs you have found into a single list.
+            b. Combine this list into one newline-separated string and call the `Advanced Image Analyzer` tool ONCE.
+
+          5. **Compile Final Report:** Take the output from the image analyzer and the content from each resource to build the final `linked_resource_analyses` list, matching each analysis back to its original source document.
+        expected_output: >
+          A JSON string representing the `linked_resource_analyses` list.
+          * Each object in the list should include:
+              * `resource_id`: The Jira issue key or Confluence Page ID.
+              * `type`: 'jira' or 'confluence'.
+              * For successfully processed resources:
+                  * `Workspaceed_content_summary`: A summary of the fetched text (or the full text if concise).
+                  * `image_analyses`: An object mapping each image reference (filename/URL) found within this linked resource to its corresponding analysis result or error message.
+              * For skipped "PROJB-" Jira tickets, include a note indicating it was skipped.
+              * For resources where fetching failed, include a note about the failure.
+          * If no processable linked resources are found in the `integrated_description`, output an empty list `[]`.
+
+  FinalAnalysisConsolidationCrew:
+    depends_on:
+      - InitialFeatureConsolidationCrew
+      - LinkedResourceFetcherAndAnalyzerCrew
+    output_naming_template: '{jira_ticket_id}_5_FinalAnalysisConsolidationCrew.md'
+    agents:
+      final_report_agent:
+        role: "Comprehensive Feature Analysis Report Generator"
+        goal: "Combine the primary ticket analysis (including its images) with all analyses from linked resources (and their images) into a single, final report."
+        backstory: >
+          The ultimate assembler. Takes the deeply analyzed primary feature information and integrates it
+          with all findings from related documentation, ensuring a complete and coherent picture is presented.
+          The output is structured for easy consumption by subsequent review crews.
+    tasks:
+      compile_final_comprehensive_report:
+        agent: final_report_agent
+        description: >
+          Input 1 (from `InitialFeatureConsolidationCrew`): JSON object with 'ticket_key', 'summary', and 'integrated_description' for the primary ticket {jira_ticket_id}.
+          Input 2 (from `LinkedResourceFetcherAndAnalyzerCrew`): JSON string, a list of analyses for linked resources.
+
+          [InitialFeatureConsolidationCrew]
+          {InitialFeatureConsolidationCrew}
+          [/InitialFeatureConsolidationCrew]
+
+          [LinkedResourceFetcherAndAnalyzerCrew]
+          {LinkedResourceFetcherAndAnalyzerCrew}
+          [/LinkedResourceFetcherAndAnalyzerCrew]
+          -----------------------------
+
+          Your task is to generate a comprehensive report. Follow these steps precisely:
+
+          1.  **Unconditionally start the report with the primary ticket's details.** Take the `ticket_key`, `summary`, and `integrated_description` from Input 1 and format them. This section is the mandatory foundation of your output and must be present regardless of any other conditions.
+
+          2.  **Examine the list of linked resources from Input 2.**
+              a. **If the list is NOT empty**, iterate through each resource analysis and append it to the report, following the detailed formatting rules below for processed or skipped items.
+              b. **If the list IS EMPTY (`[]`)**, you MUST append a simple, clear note to the end of the primary ticket details, for example: "\n\n--- No linked resources were processed. ---"
+
+          3.  **Formatting Rules for Linked Resources (only apply if the list is not empty):**
+              a. For a resource marked as "skipped_due_to_AL_filter", append a note like:
+                  "\n\n--- Linked Resource: Jira Ticket [PROJB-XXX] (Skipped due to filter) ---\n"
+              b. Otherwise (if it was processed):
+                  i. Append a clear header: "\n\n--- Linked Resource: [Type] [ID] (e.g., Jira Ticket PROJ-123 or Confluence Page 12345678) ---\n".
+                  ii. Append its `Workspaceed_content_summary` or full content.
+                  iii. For each image analysis within that resource (from its `image_analyses`), append it clearly:
+                    "\n[Analysis of image_filename from [Linked Resource ID]]:\n<analysis_text>\n<plantuml_code_if_any>\n"
+                    or "\n[Analysis of image_filename from [Linked Resource ID]]: Failed - <error_message>\n".
+
+          4.  **Final Output:** The result of your work is a single text block. **Crucially, even if no linked resources were found, your output must still contain the fully detailed report for the primary ticket.**
+        expected_output: >
+          A single, comprehensive text block. It should start with:
+          "Jira Ticket: {jira_ticket_id}\nSummary: [Primary Ticket Summary]\n\n[Integrated primary description including its image analyses from InitialFeatureConsolidationCrew output]"
+          This is then followed by either a note saying no linked resources were processed, or by the detailed list of all processed linked resources.
+  triage_crew:
+    depends_on:
+      - FinalAnalysisConsolidationCrew
+    output_naming_template: '{jira_ticket_id}_6_triage_result.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      triage_agent:
+        role: "Security Triage Agent"
+        goal: "Determine if the feature requires security review or is primarily a UI change."
+        backstory: >
+          This agent analyzes feature descriptions (which may include textual analysis of related images like diagrams or mockups)
+          to determine the need for a security review. It evaluates the feature's impact on security based on the
+          provided details, classifying it first based on inherent risk indicators before providing detailed justification.
+    tasks:
+      perform_triage:
+        agent: triage_agent
+        description: >
+          **Step 1: Initial Classification based on Feature Description**
+
+          Based **solely** on the upcoming feature description (which may contain textual descriptions derived from images), assess whether it primarily details UI/presentation layer adjustments (e.g., changes to layout, styling, controls, client-side manipulation of already-present data) OR if it indicates potential involvement with higher-risk backend functions or data handling. Look for indicators suggesting changes to:
+          1.  **Authentication / Authorization:** Changes to login, permissions, roles, or access control enforcement.
+          2.  **Sensitive Data Handling:** Introduction of new sensitive data types (PII, SPI, financial, credentials), or changes in how existing sensitive data is processed, stored, encrypted, or transmitted.
+          3.  **New Input Vectors / Parsing:** Adding complex file uploads, new API endpoints, or parsing potentially untrusted external data streams.
+          4.  **Security Controls:** Modifying cryptography, security logging/auditing, or other explicit security features.
+          5.  **External System Integration:** Adding or changing interactions with third-party services or APIs.
+          6.  **Data Schema Changes:** Significant alterations to database structure, especially involving sensitive fields or permissions.
+          7.  **Privilege Changes:** Features operating with elevated privileges or modifying user/system privileges.
+
+          Conclude this step with an assessment: Does this feature description strongly suggest modifications that warrant a detailed security threat model review by an architect (classify as **Core Logic/Data/Security**), or does it appear to primarily be a UI/presentation enhancement where standard secure coding practices and reviews are likely sufficient (classify as **UI/Presentation**)?
+
+          **Step 2: Detailed Justification using Context**
+
+          Now, provide a detailed explanation for your classification from Step 1. Analyze the feature description (potentially including image analysis results) and any linked information using the provided context:
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+          -----------------------------------------------
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+          -----------------------------------------------
+
+          [FEATURE_DESCRIPTION]
+          {FinalAnalysisConsolidationCrew}
+          [/FEATURE_DESCRIPTION]
+          -----------------------------------------------
+
+          Highlight specific elements from the feature description and context that support your conclusion (either UI/Presentation or Core Logic/Data/Security). Explain *why* these elements indicate low or high risk according to the criteria in Step 1. Pay attention to details potentially revealed through image analysis text.
+
+          **Step 3: Triage**
+
+          Based on your analysis, provide a clear statement indicating whether the feature necessitates a full security review (and subsequent threat modeling) or if standard development processes and testing are sufficient. If classified as UI/Presentation, explicitly state that threat modeling is not needed for *this specific feature* based on the current description.
+        expected_output: |
+          Only a detailed report containing:
+          1. Initial classification (**UI/Presentation** or **Core Logic/Data/Security**).
+          2. Detailed justification referencing the feature description (including any integrated image analysis) and provided context (technological, business).
+          3. Conclusion on whether a full security review/threat model is required.
+          If classified as UI/Presentation, the report must clearly indicate that no security threat modeling is needed for this feature, using the tag: NO_THREAT_MODELING_NEEDED.
+
+  attack_scenario_crew:
+    depends_on:
+      and:
+        - crew: FinalAnalysisConsolidationCrew
+        - crew: triage_crew
+          condition:
+            output_not_contains: 'NO_THREAT_MODELING_NEEDED'
+    output_naming_template: '{jira_ticket_id}_7_attack_scenarios.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      attack_scenario_agent:
+        role: "Attack Simulation Agent"
+        goal: "Identify realistic attack vectors and exploitation scenarios for the feature"
+        backstory: >
+          This agent simulates adversarial attack scenarios based on the feature's security posture.
+          It analyzes potential abuse cases, adversary actions, and possible security failures using the enriched feature description.
+    tasks:
+      generate_attack_scenarios:
+        agent: attack_scenario_agent
+        description: >
+          Analyze the feature details (including any image analysis provided) to identify attack vectors.
+          Consider the technological and business context and the triage results to focus only on real and relevant threats that could be introduced by this feature.
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+
+          [FEATURE_ANALYSIS_RESULT]
+          {FinalAnalysisConsolidationCrew}
+          [/FEATURE_ANALYSIS_RESULT]
+
+          [TRIAGE]
+          {triage_crew}
+          [/TRIAGE]
+
+          Consider insider threats, automated attacks, API abuse, credential theft, and privilege escalation.
+        expected_output: >
+          Only a list of attack scenarios detailing attacker goals, exploitation methods, and expected impact, informed by the provided context, triage results, and potentially image analysis insights.
+
+  threat_modeling_crew:
+    depends_on:
+      - attack_scenario_crew
+    output_naming_template: '{jira_ticket_id}_8_stride_threat_model.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      threat_model_agent:
+        role: "Threat Modeling Agent"
+        goal: "Identify security threats to the feature using STRIDE and propose mitigations"
+        backstory: >
+          This agent specializes in threat modeling using STRIDE.
+          It considers all aspects of the feature (including visual elements described textually), analyzing risks and security best practices.
+    tasks:
+      generate_stride_threat_model:
+        agent: threat_model_agent
+        description: >
+          Your task is to analyze the feature details and context provided to produce a structured STRIDE threat model as your Final Answer.
+
+          Analyze the feature details (including any provided image analysis), attack scenarios, and the following context:
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+
+          [FEATURE_ANALYSIS_RESULT]
+          {FinalAnalysisConsolidationCrew}
+          [/FEATURE_ANALYSIS_RESULT]
+
+          [ATTACK_SCENARIOS_RESULT]
+          {attack_scenario_crew}
+          [/ATTACK_SCENARIOS_RESULT]
+
+          [TRIAGE_RESULTS]
+          {triage_crew}
+          [/TRIAGE_RESULTS]
+
+          Identify potential threats in each STRIDE category and propose mitigations.
+        expected_output: |
+          Only a structured STRIDE threat model covering all security threats, prioritization, and mitigations, informed by the provided context and potentially image analysis insights.
+
+  security_best_practices_crew:
+    depends_on:
+      - threat_modeling_crew
+    output_naming_template: '{jira_ticket_id}_9_best_practices_review.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      security_best_practices_agent:
+        role: "Security Best Practices Auditor"
+        goal: "Verify mitigations align with OWASP ASVS, CIS, and NIST security best practices"
+        backstory: >
+          This agent ensures that security mitigations follow best practices.
+          It checks against frameworks such as OWASP ASVS, CIS benchmarks, and NIST standards.
+    tasks:
+      check_security_best_practices:
+        agent: security_best_practices_agent
+        description: >
+          Cross-check the proposed mitigations from the threat model against industry best practices, considering the following context:
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+
+          [THREAT_MODEL_RESULT]
+          {threat_modeling_crew}
+          [/THREAT_MODEL_RESULT]
+
+          [TRIAGE_RESULTS]
+          {triage_crew}
+          [/TRIAGE_RESULTS]
+        expected_output: >
+          Only a report highlighting any missing security best practices or incorrect mitigations, informed by the provided context.
+
+  threat_validation_crew:
+    depends_on:
+      - security_best_practices_crew
+    output_naming_template: '{jira_ticket_id}_10_validated_threat_model.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      validation_agent:
+        role: "Threat Model Validator"
+        goal: "Verify that the STRIDE threat model is accurate and complete"
+        backstory: >
+          This agent ensures that the generated threat model is thorough and aligns with best practices.
+          It performs an independent validation to confirm correctness and feasibility of mitigations.
+    tasks:
+      validate_threat_model:
+        agent: validation_agent
+        description: >
+          Review the threat model and security best practices results. Ensure practical mitigations and that the model focuses on risks relevant to the feature, considering the triage results and context:
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+
+          [SECURITY_BEST_PRACTICES_RESULT]
+          {security_best_practices_crew}
+          [/SECURITY_BEST_PRACTICES_RESULT]
+
+          [TRIAGE_RESULTS]
+          {triage_crew}
+          [/TRIAGE_RESULTS]
+        expected_output: >
+          Only a revised, validated threat model with all necessary corrections, informed by the provided context.
+
+  business_risk_assessment_crew:
+    depends_on:
+      - threat_validation_crew
+    output_naming_template: '{jira_ticket_id}_11_business_risk_assessment.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      risk_assessment_agent:
+        role: "Business Risk Assessor"
+        goal: "Assess the business impact of identified security threats"
+        backstory: >
+          This agent analyzes the financial, reputational, and operational impact of security risks.
+          It evaluates threats in the context of potential revenue loss, regulatory impact, and customer trust.
+    tasks:
+      assess_business_risks:
+        agent: risk_assessment_agent
+        description: >
+          Review the validated threat model and assess how each risk affects the business, considering the following context:
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+
+          [VALIDATED_THREAT_MODEL_RESULT]
+          {threat_validation_crew}
+          [/VALIDATED_THREAT_MODEL_RESULT]
+
+          [TRIAGE_RESULTS]
+          {triage_crew}
+          [/TRIAGE_RESULTS]
+
+          Determine financial loss potential, compliance concerns, and customer trust impact.
+        expected_output: >
+          Only a risk report outlining the most critical threats in terms of business impact, informed by the provided context.
+
+  threat_model_consolidation_crew:
+    depends_on:
+      and:
+        - crew: FinalAnalysisConsolidationCrew
+        - crew: triage_crew
+        - crew: attack_scenario_crew
+        - crew: threat_modeling_crew
+        - crew: security_best_practices_crew
+        - crew: threat_validation_crew
+        - crew: business_risk_assessment_crew
+    output_naming_template: '{jira_ticket_id}_12_comprehensive_threat_model.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      consolidation_agent:
+        role: "Threat Model Consolidation Agent"
+        goal: "Combine all findings into a single, coherent, and comprehensive threat model document, or state if triage prevented it."
+        backstory: >
+          This agent consolidates all security assessments, attack scenarios, STRIDE threat modeling, security best practices, validation feedback, and business risk assessments into a structured report. If the triage indicated no threat modeling was needed, it will report that instead.
+    tasks:
+      generate_comprehensive_threat_model:
+        agent: consolidation_agent
+        description: >
+          Your task is to produce a final report. There are two possible scenarios.
+
+          **Scenario 1: Threat Modeling was Skipped**
+          First, check if the [ATTACK_SCENARIOS_RESULT] shows that the crew was skipped. If it was, your final answer is simply the content from the [TRIAGE_RESULTS].
+
+          **Scenario 2: Threat Modeling was Performed**
+          If the attack scenario crew was NOT skipped, then your task is to compile all provided threat model components into a single, structured document as described in the `expected_output`.
+
+          Review the inputs and provide the correct output for the scenario as your **Final Answer**.
+
+          [ALL INPUTS FOR CONTEXT]
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+          [FEATURE_ANALYSIS_RESULT]
+          {FinalAnalysisConsolidationCrew}
+          [/FEATURE_ANALYSIS_RESULT]
+          [TRIAGE_RESULTS]
+          {triage_crew}
+          [/TRIAGE_RESULTS]
+          [ATTACK_SCENARIOS_RESULT]
+          {attack_scenario_crew}
+          [/ATTACK_SCENARIOS_RESULT]
+          [STRIDE_THREAT_MODEL_RESULT]
+          {threat_modeling_crew}
+          [/STRIDE_THREAT_MODEL_RESULT]
+          [SECURITY_BEST_PRACTICES_RESULT]
+          {security_best_practices_crew}
+          [/SECURITY_BEST_PRACTICES_RESULT]
+          [VALIDATED_THREAT_MODEL_RESULT]
+          {threat_validation_crew}
+          [/VALIDATED_THREAT_MODEL_RESULT]
+          [BUSINESS_RISK_ASSESSMENT_RESULT]
+          {business_risk_assessment_crew}
+          [/BUSINESS_RISK_ASSESSMENT_RESULT]
+        expected_output: >
+          If the `ATTACK_SCENARIOS_RESULT` was skipped, only the Triage crew's output confirming that threat modeling was not required.
+          Otherwise: Only a fully consolidated and structured threat model document ready for security review, informed by the provided context.
+
+  threat_model_evaluation_crew:
+    depends_on:
+      - threat_model_consolidation_crew
+    output_naming_template: '{jira_ticket_id}_13_evaluated_threat_model.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      evaluation_agent:
+        role: "Threat Model Evaluation Agent"
+        goal: "Evaluate and refine the consolidated threat model document to ensure accuracy, completeness, and best practices."
+        backstory: >
+          This agent is responsible for critically reviewing the consolidated threat model document.
+          It ensures that the document is well-structured, logically sound, and aligns with security best practices.
+          The agent does not follow a predefined checklist but instead identifies areas that require refinement
+          based on the context of the generated threat model.
+
+    tasks:
+      evaluate_threat_model:
+        agent: evaluation_agent
+        description: >
+          Critically review the consolidated threat model document, considering the following context:
+
+          [TRIAGE_RESULTS]
+          {triage_crew}
+          [/TRIAGE_RESULTS]
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+
+          [CONSOLIDATED_THREAT_MODEL_RESULT]
+          {threat_model_consolidation_crew}
+          [/CONSOLIDATED_THREAT_MODEL_RESULT]
+
+          Identify and address:
+          - Any vague or incomplete security recommendations.
+          - Any inconsistencies, contradictions, or missing mitigations.
+          - Any potential improvements to security controls based on best practices.
+          - Any overlooked security risks, attack vectors, or threat scenarios (potentially informed by image analysis details if present in the feature overview).
+          - Any enhancements needed for clarity, readability, or structure.
+
+          Do not rely on a predefined checklist — analyze the document holistically and determine which refinements
+          are necessary to improve the overall quality and completeness of the threat model.
+
+          If refinements are necessary, generate an improved version of the threat model document.
+        expected_output: |
+          Only a refined and well-validated threat model document that corrects inconsistencies, strengthens mitigations, and ensures a comprehensive security assessment.
+
+  security_assurance_crew:
+    depends_on:
+      - threat_model_evaluation_crew
+    output_naming_template: '{jira_ticket_id}_14_security_assurance_review.md'
+    context:
+      business-perspective-context: 'business-perspective-context.md'
+      technological-context: 'technological-context.md'
+    agents:
+      assurance_agent:
+        role: "Security Assurance Agent"
+        goal: "Perform an expert-level review to ensure the threat model is complete, logically sound, and aligned with security best practices."
+        backstory: >
+          This agent acts as an independent security auditor. Unlike previous agents, it does not simply validate the document
+          against predefined criteria—it critically analyzes the document holistically to identify overlooked issues, logical inconsistencies,
+          vague recommendations, incomplete mitigations, and real-world applicability concerns.
+          The agent ensures that the threat model is comprehensive, aligns with modern security best practices, and is structured
+          for maximum clarity and impact.
+
+    tasks:
+      perform_security_assurance_review:
+        agent: assurance_agent
+        description: >
+          Conduct a deep security assurance review of the evaluated threat model document, considering the following context:
+
+          [TRIAGE_RESULTS]
+          {triage_crew}
+          [/TRIAGE_RESULTS]
+
+          [TECHNOLOGICAL_CONTEXT]
+          {technological-context}
+          [/TECHNOLOGICAL_CONTEXT]
+
+          [BUSINESS_PERSPECTIVE_CONTEXT]
+          {business-perspective-context}
+          [/BUSINESS_PERSPECTIVE_CONTEXT]
+
+          [EVALUATED_THREAT_MODEL_RESULT]
+          {threat_model_evaluation_crew}
+          [/EVALUATED_THREAT_MODEL_RESULT]
+
+          This is not a validation step—it is an **expert-level** security assurance review. The goal is to refine the document, ensuring it is **logically sound, complete, actionable, and aligned with real-world security standards.**
+
+          The agent should **dynamically**:
+          - **Analyze whether the threat model fully captures all relevant threats and attack vectors** (considering any insights from potential image analysis text).
+          - **Ensure mitigations are precise, feasible, and operationally viable** (not overly broad, vague, or impractical).
+          - **Identify and correct logical inconsistencies, contradictions, or security gaps.**
+          - **Assess security best practices adherence dynamically, ensuring the recommendations are fully aligned with OWASP ASVS, NIST SP 800-63B, and CIS benchmarks.**
+          - **Ensure real-world applicability**, refining mitigations that may introduce excessive friction, be impractical, or lack consideration for usability.
+          - **Improve clarity and readability**, ensuring stakeholders can easily act on recommendations.
+
+          If **any refinements are necessary**, generate an **improved threat model document** that is **logically sound, actionable, and optimized for security best practices.**
+        expected_output: |
+          Only a fully assured, refined threat model document, ensuring all security considerations
+          have been addressed comprehensively, considering all context.
+
+  tl_dr_crew:
+    depends_on:
+      - security_assurance_crew
+      - FinalAnalysisConsolidationCrew
+    output_naming_template: '{jira_ticket_id}_15_tl_dr.md'
+    agents:
+      tl_dr_agent:
+        role: "Threat Model and Feature Summary Agent"
+        goal: "Create a concise, actionable, and well-formatted summary of the threat model (or triage result) and key points from the feature analysis for Jira."
+        backstory: >
+          This agent distills complex threat models, triage results, and feature analysis details (now potentially including summaries of images) into clear, brief messages suitable for sharing within platforms like Jira.
+          It focuses on highlighting critical security risks, actionable recommendations derived from threat modeling, and other relevant points from the original feature request that might need attention, or simply stating that no threat model was needed. Ensures the output is highly readable and useful for developers and PMs.
+    tasks:
+      generate_tl_dr:
+        agent: tl_dr_agent
+        description: >
+          Review the inputs provided below. Generate a concise, actionable, and well-formatted summary for Jira.
+
+          [FEATURE_ANALYSIS_DETAILS]
+          {FinalAnalysisConsolidationCrew}
+          [/FEATURE_ANALYSIS_DETAILS]
+
+          [SECURITY_ASSESSMENT]
+          {resolved_security_assessment_summary}
+          [/SECURITY_ASSESSMENT]
+
+          Based on these, create a concise summary. The summary should accurately reflect the content of the SECURITY_ASSESSMENT.
+        expected_output: "{resolved_expected_output_content}"
+        resolved_inputs:
+          resolved_security_assessment_summary:
+            case:
+              - condition:
+                  crew: security_assurance_crew
+                  status: SUCCESS
+                value: "{security_assurance_crew}"
+              - condition:
+                  crew: attack_scenario_crew
+                  status: SKIPPED
+                value: "Based on triage: {triage_crew}"
+              - default: "No definitive security assessment available for summary."
+          resolved_expected_output_content:
+            case:
+              - condition:
+                  crew: security_assurance_crew
+                  status: SUCCESS
+                value: |
+                  Only a structured STRIDE threat model summary. The output will be a single block of text formatted for a Jira description or comment field. It must include the following sections using Jira's syntax for bold italics (`*_Section Title:_*`) for headings and bullet points (`* Item` - note the required space after the asterisk) for lists:
+
+                  *_Feature:_* [Brief description of the feature, potentially noting analyzed visual components]
+
+                  *_Key Risks Identified (from Threat Model):_*
+                  * Risk 1
+                  * Risk 2
+                  * ... (If no significant risks were found, state "No major risks identified.")
+
+                  *_Key Mitigation Recommendations (from Threat Model):_*
+                  * Mitigation 1
+                  * Mitigation 2
+                  * ... (If no specific mitigations were required beyond standard practice, state "Adhere to standard secure coding practices.")
+
+                  *_Potential Impact (Security):_* [Brief statement on potential business/security impact]
+
+                  *_Recommendations from Feature Analysis (for Original Ticket):_*
+                  * Point 1 from feature analysis (incl. image insights)
+                  * Point 2 from feature analysis (incl. image insights)
+                  * ... (If no specific points to carry forward, state "No specific constraints or requirements noted.")
+
+                  *_Actionable Next Steps:_*
+                  * Combined action 1 (e.g., Implement security mitigations)
+                  * Combined action 2 (e.g., Address feature requirements/image points)
+                  * Combined action 3 (e.g., Schedule follow-up review)
+
+                  The summary should be concise and easy to scan within a Jira ticket. Ensure correct Jira Wiki Markup syntax is used, especially `* text *` for bold, `_ text _` for italics, `*_ text _*` for bold italics, and `* ` for bullet points.
+              - condition:
+                  crew: attack_scenario_crew
+                  status: SKIPPED
+                value: |
+                  Only a single paragraph of plain text. The output should confirm that based on initial review, no dedicated threat model is required for this feature, and provide the justification from triage. Example: "Based on the initial review, this feature was determined to be primarily UI/Presentation related and does not require a dedicated threat model at this time. Justification from triage: [Insert justification extracted from triage_crew content from the SECURITY_ASSESSMENT input]."
+              - default: "Generate a concise summary based on the provided inputs, ensuring it is a plain text or Jira Wiki Markup formatted string."
+
+  jira_ticket_creation_triage_only_crew:
+    depends_on:
+      and:
+        - tl_dr_crew
+        - crew: triage_crew
+          condition:
+            output_contains: 'NO_THREAT_MODELING_NEEDED'
+    output_naming_template: '{jira_ticket_id}_16a_jira_ticket_created_triage_only.md'
+    agents:
+      jira_ticket_agent:
+        role: "Jira Ticket Creation Agent (Triage Only)"
+        goal: "Create a simple Jira ticket for a completed triage, attach minimal artifacts, and link it back to the original ticket."
+        backstory: "I specialize in handling the outcome of a triage that does not require a full security review. I create a simple informational ticket, attach the key decision-making documents, and link it for record-keeping."
+        tools:
+          - create_issue
+          - issue_attach_file
+          - link_issue
+    tasks:
+      create_and_finalize_triage_ticket:
+        agent: jira_ticket_agent
+        description: >
+          **Goal: Create, Attach, and Link a 'Triage Complete' Jira Ticket.**
+
+          **Step 1: Create Ticket**
+          Use the `Create Jira Ticket` tool. For the `Description` parameter, use the content provided between the `[START_TL_DR]` and `[END_TL_DR]` markers below.
+          - **Summary**: `Security Triage Complete for {jira_ticket_id}: No Threat Model Required`
+          - **Issue Type**: `Task`
+          - **Priority**: `Low`
+          - **Status**: `AI_DISCARDED`
+          
+          If creation fails, stop and report the error.
+
+          **Step 2: Attach Artifacts**
+          If the ticket was created successfully, use the `attach_file_to_jira_ticket` tool once in batch mode. Construct a list of three dictionaries for the `attachments` argument.
+
+          For each dictionary, use the specified filename and find its content in the corresponding marked-off section below.
+
+          - **Item 1:**
+            - `filename`: `feature_analysis_{jira_ticket_id}.md`
+            - `file_content`: Use the full content between `[START_FEATURE_ANALYSIS]` and `[END_FEATURE_ANALYSIS]`.
+
+          - **Item 2:**
+            - `filename`: `triage_result_{jira_ticket_id}.md`
+            - `file_content`: Use the full content between `[START_TRIAGE_RESULT]` and `[END_TRIAGE_RESULT]`.
+
+          - **Item 3:**
+            - `filename`: `tl_dr_{jira_ticket_id}.md`
+            - `file_content`: Use the full content between `[START_TL_DR]` and `[END_TL_DR]`.
+
+          **Step 3: Link Ticket**
+          Use the `link_jira_tickets` tool to link the new ticket to the original ticket `{jira_ticket_id}` with link type 'Relates'.
+
+          **Step 4: Final Report**
+          Consolidate the results of all actions into a single dictionary.
+
+          ---
+          **DATA BLOCKS:**
+
+          [START_FEATURE_ANALYSIS]
+          {FinalAnalysisConsolidationCrew}
+          [END_FEATURE_ANALYSIS]
+
+          [START_TRIAGE_RESULT]
+          {triage_crew}
+          [END_TRIAGE_RESULT]
+
+          [START_TL_DR]
+          {tl_dr_crew}
+          [END_TL_DR]
+        expected_output: |
+          A single dictionary including the ticket creation details, and the status of attachment and linking operations. Example: {{'ticket_key': 'PROJB-123', 'status': 'AI_DISCARDED', 'link': '...', 'attachment_status': 'Success: Attached 3/3 files.', 'linking_status': 'Successfully linked PROJB-123 to PROJA-456.'}}
+
+  jira_ticket_creation_threat_model_crew:
+    depends_on:
+      and:
+        - security_assurance_crew
+        - tl_dr_crew
+        - crew: triage_crew
+          condition:
+            output_not_contains: 'NO_THREAT_MODELING_NEEDED'
+    output_naming_template: '{jira_ticket_id}_16b_jira_ticket_created_threat_model.md'
+    agents:
+      jira_ticket_agent:
+        role: "Jira Ticket Creation Agent (Threat Model)"
+        goal: "Create a detailed Jira ticket for a completed threat model, attach all artifacts, and link it back to the original ticket."
+        backstory: "I handle the final output of a full security review. I create a formal 'Threat Model Review' ticket, ensure every single generated document is attached for full traceability, and link it for the development and security teams."
+        tools:
+          - create_issue
+          - issue_attach_file
+          - link_issue
+    tasks:
+      create_and_finalize_threat_model_ticket:
+        agent: jira_ticket_agent
+        description: >
+          **Goal: Create, Attach, and Link a 'Threat Model Review' Jira Ticket.**
+
+          **Step 1: Create Ticket**
+          Use the `Create Jira Ticket` tool. For the `Description` parameter, use the content provided between the `[START_TL_DR]` and `[END_TL_DR]` markers below.
+          - **Summary**: `Security Threat Model Review for {jira_ticket_id}: Key Findings`
+          - **Issue Type**: `Threat Model`
+          - **Priority**: `Medium`
+          - **Status**: `AI_REVIEW`
+
+          **Step 2: Attach All Artifacts**
+          Use the `attach_file_to_jira_ticket` tool once in batch mode. Construct a list of 11 dictionaries for the `attachments` argument. For each file, find its content in the corresponding marked-off section in the DATA BLOCKS section below.
+
+          - **File 1:** `filename`: `feature_analysis.md`, content from `[START_FEATURE_ANALYSIS]` block.
+          - **File 2:** `filename`: `triage_result.md`, content from `[START_TRIAGE_RESULT]` block.
+          - **File 3:** `filename`: `attack_scenarios.md`, content from `[START_ATTACK_SCENARIOS]` block.
+          - **File 4:** `filename`: `stride_threat_model.md`, content from `[START_STRIDE_MODEL]` block.
+          - **File 5:** `filename`: `best_practices_review.md`, content from `[START_BEST_PRACTICES]` block.
+          - **File 6:** `filename`: `validated_threat_model.md`, content from `[START_VALIDATED_MODEL]` block.
+          - **File 7:** `filename`: `business_risk_assessment.md`, content from `[START_BIZ_RISK]` block.
+          - **File 8:** `filename`: `comprehensive_threat_model.md`, content from `[START_COMPREHENSIVE_MODEL]` block.
+          - **File 9:** `filename`: `evaluated_threat_model.md`, content from `[START_EVALUATED_MODEL]` block.
+          - **File 10:** `filename`: `security_assurance_review.md`, content from `[START_ASSURANCE_REVIEW]` block.
+          - **File 11:** `filename`: `tl_dr.md`, content from `[START_TL_DR]` block.
+
+          **Step 3 & 4: Link and Report**
+          Use the `link_issue` tool, then consolidate all results into a final dictionary.
+
+          ---
+          **DATA BLOCKS:**
+
+          [START_FEATURE_ANALYSIS]
+          {FinalAnalysisConsolidationCrew}
+          [END_FEATURE_ANALYSIS]
+
+          [START_TRIAGE_RESULT]
+          {triage_crew}
+          [END_TRIAGE_RESULT]
+
+          [START_ATTACK_SCENARIOS]
+          {attack_scenario_crew}
+          [END_ATTACK_SCENARIOS]
+
+          [START_STRIDE_MODEL]
+          {threat_modeling_crew}
+          [END_STRIDE_MODEL]
+
+          [START_BEST_PRACTICES]
+          {security_best_practices_crew}
+          [END_BEST_PRACTICES]
+
+          [START_VALIDATED_MODEL]
+          {threat_validation_crew}
+          [END_VALIDATED_MODEL]
+
+          [START_BIZ_RISK]
+          {business_risk_assessment_crew}
+          [END_BIZ_RISK]
+
+          [START_COMPREHENSIVE_MODEL]
+          {threat_model_consolidation_crew}
+          [END_COMPREHENSIVE_MODEL]
+
+          [START_EVALUATED_MODEL]
+          {threat_model_evaluation_crew}
+          [END_EVALUATED_MODEL]
+
+          [START_ASSURANCE_REVIEW]
+          {security_assurance_crew}
+          [END_ASSURANCE_REVIEW]
+
+          [START_TL_DR]
+          {tl_dr_crew}
+          [END_TL_DR]
+        expected_output: |
+          A single dictionary including the ticket creation details, and the status of attachment and linking operations. Example: {{'ticket_key': 'PROJB-123', 'status': 'AI_REVIEW', 'link': '...', 'attachment_status': 'Success: Attached 11/11 files.', 'linking_status': 'Successfully linked PROJB-123 to PROJA-456.'}}
+
+  severity_extractor_crew:
+    depends_on:
+      - security_assurance_crew
+    output_naming_template: '{jira_ticket_id}_17a_extracted_severity.md'
+    agents:
+      severity_extractor_agent:
+        role: "Security Severity Extraction Specialist"
+        goal: "Analyze a security assessment document and output ONLY the highest severity level found (e.g., Critical, High, Medium, Low)."
+        backstory: "I am an AI agent that specializes in parsing long, complex security documents to find and extract a single, key piece of information: the severity rating. I am precise and provide no extra commentary."
+    tasks:
+      extract_highest_severity:
+        agent: severity_extractor_agent
+        description: >
+          **Goal:** Find the highest severity level from the security assessment provided below.
+
+          **Input (Security Assessment):** `{security_assurance_crew}`
+          
+          **Instructions:**
+          1. Read the entire security assessment.
+          2. Identify all mentions of severity levels: 'Critical', 'High', 'Medium', 'Low'.
+          3. Determine which of the mentioned levels is the highest. (The order is Critical > High > Medium > Low).
+          4. If no severity level is explicitly mentioned, your output should be 'Medium'.
+          
+          Your Final Answer MUST be a single word.
+        expected_output: |
+          A single word representing the highest severity found. For example: `High`
+
+  jira_priority_setting_crew:
+    depends_on:
+      - jira_ticket_creation_threat_model_crew
+      - severity_extractor_crew
+    output_naming_template: '{jira_ticket_id}_17b_priority_set_status.md'
+    agents:
+      priority_agent:
+        role: "Jira Ticket Priority Executor"
+        goal: "Set the priority of a Jira ticket using pre-defined inputs."
+        backstory: >
+          I am a simple, efficient agent that takes a ticket key and a priority value and executes the command to update the Jira ticket. I do not perform analysis.
+        tools:
+          - name: jira_set_ticket_priority
+            result_as_answer: true
+    tasks:
+      set_ticket_priority:
+        agent: priority_agent
+        description: >
+          **Goal:** Set the priority for the threat model ticket using the provided inputs.
+
+          **Input 1 (Jira Ticket Info):** `{jira_ticket_creation_threat_model_crew}`
+          **Input 2 (Determined Severity):** `{severity_extractor_crew}`
+          
+          **Instructions:**
+          1. Parse Input 1 to get the `ticket_key`.
+          2. The value from Input 2 is the `priority_value`.
+          3. Use the `jira_set_ticket_priority` tool with the extracted `ticket_key` and `priority_value`.
+        expected_output: |
+          A confirmation message stating the outcome. Example: "Successfully set priority of ticket PROJB-123 to High based on security assessment."
+
+  security_architect_assignment_execution_crew:
+    depends_on:
+      or:
+        - jira_ticket_creation_triage_only_crew
+        - jira_ticket_creation_threat_model_crew
+    output_naming_template: '{jira_ticket_id}_18_architect_assigned.md'
+    agents:
+      architect_assigner_agent:
+        role: "Security Architect Assigner"
+        goal: "Determine the correct Security Architect by fetching squad data and analyzing ticket context, then perform the assignment and provide clear reasoning."
+        backstory: >
+          This agent is responsible for ensuring Jira tickets are meticulously assigned. It first gathers the necessary data—the ticket to be assigned, the context from the original feature ticket, and a squad-to-architect mapping from Confluence. It then uses this data to decide on the best architect and performs the reassignment.
+        tools:
+          - jira_reassign_issue
+          - confluence
+    tasks:
+      execute_reassignment_and_finalize:
+        guardrail_type: "generic_agent_validator"
+        agent: architect_assigner_agent
+        resolved_inputs:
+          successful_ticket_creation_output:
+            case:
+              - condition: { crew: jira_ticket_creation_threat_model_crew, status: SUCCESS }
+                value: "{jira_ticket_creation_threat_model_crew}"
+            default: "{jira_ticket_creation_triage_only_crew}"
+        description: >
+          **Primary Goal:** Assign the newly created AI ticket to the correct Security Architect based on squad responsibilities.
+
+          **Inputs From Context:**
+          - AI-Created Ticket Info: `{successful_ticket_creation_output}`
+          - Original Feature Ticket Details: `{JiraTicketFetcherCrew}`
+
+          **Step-by-Step Instructions:**
+          1.  **Fetch Squad-to-Architect Map:**
+              * Use the `confluence` tool with page ID `[PLACEHOLDER - ID of a confluence page with the squad to security architect mapping]` to get the latest squad allocation data.
+              * Parse the content to create a `squad_architect_map` (a dictionary mapping squad names to their architect ID and responsibilities).
+
+          2.  **Extract Necessary Data from Context:**
+              * From the `AI-Created Ticket Info`, parse the JSON to get the `ticket_key`. This is the ticket you must reassign.
+              * From the `Original Feature Ticket Details`, parse the JSON to get the `summary` and the `squad` custom field value. This provides the context for your assignment decision.
+
+          3.  **Determine Most Relevant Architect & Formulate Reasoning:**
+              * Use the `squad` value from the original ticket to look up the corresponding architect in the `squad_architect_map` you fetched.
+              * If a direct match is found, select that architect's ID.
+              * If there is no direct match for the squad, analyze the original ticket's `summary` and compare it against the `responsibilities` of each squad in your map to find the best fit.
+              * Your `assignment_reasoning` MUST explain your choice, either by stating the direct squad match or by explaining which squad's responsibilities best match the feature summary.
+
+          4.  **Reassign Ticket:**
+              * Use the `jira_reassign_issue` tool with the `ticket_key` of the AI-created ticket and the `architect_id` you just determined.
+
+          5.  **Finalize Output:**
+              * Provide a single, comprehensive string message stating the outcome (e.g., success/failure, who it was assigned to) and including your detailed `assignment_reasoning`.
+        expected_output: >
+          A single, comprehensive string message that will be the final output of this crew.
+          This message must clearly state the outcome of the assignment attempt (e.g., "Ticket [ticket_to_assign_key] was successfully reassigned to Security Architect [architect_id] of the [Chosen Squad Name].")
+          and MUST crucially include the detailed `assignment_reasoning`.

@@ -91,8 +91,8 @@ $(DEV):
 
 $(COMPILE_REQUIREMENTS):
 	@pip install pip-tools
-	@pip-compile --generate-hashes requirements-dev.in
-	@pip-compile --generate-hashes requirements.in
+	@pip-compile --generate-hashes --verbose --no-strip-extras requirements-dev.in
+	@pip-compile --generate-hashes --verbose --no-strip-extras requirements.in
 
 $(BUILD):
 	@mkdir -p db

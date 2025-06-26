@@ -1,5 +1,5 @@
 import os
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from utils import get_embedchain_settings
 from embedchain import App
 from typing import Optional
