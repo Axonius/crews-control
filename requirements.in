@@ -6,7 +6,7 @@ crewai>=0.134.0
 duckduckgo-search
 atlassian-python-api
 pytesseract
-Pillow
+Pillow>=11.3.0
 pdf2image
 markdownify
 rich

@@ -1,3 +1,4 @@
+from typing import Optional 
 import os
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_openai import AzureChatOpenAI
@@ -33,45 +34,52 @@ def validate_env_vars(*vars):
         if os.getenv(var) is None or os.getenv(var) == "":
             raise EnvironmentVariableNotSetError(f"Environment variable '{var}' is not set.")
 
-def create_llm_client(config):
+def create_llm_client(config: dict, overrides: Optional[dict] = None) -> Any:
+    if overrides is None:
+        overrides = {}
+        
     provider = config['provider']
     validate_env_vars(config['required_vars'])
     
     if provider == 'groq':
+        model = overrides.get('model_name', os.getenv("GROQ_MODEL_NAME"))
         return ChatGroq(
-            model=os.getenv("GROQ_MODEL_NAME"),
+            model_name=model,
             api_key=os.getenv("GROQ_API_KEY"),
             streaming=config.get('stream', True),
             max_tokens=config.get('max_tokens', 8192),
-            model_name=os.getenv('GROQ_MODEL_NAME'),
         )
     elif provider == 'anthropic':
+        model = overrides.get('model_name', os.getenv("ANTHROPIC_MODEL_NAME"))
+        temperature = overrides.get('temperature', 0.7)
         return ChatAnthropic(
-            model=os.getenv("ANTHROPIC_MODEL_NAME"),
-            temperature=config.get('temperature', 0.7),
+            model=model,
+            temperature=temperature,
             max_tokens=config.get('max_tokens', 1024),
             timeout=None,
             max_retries=2,
         )
     elif provider == 'azure_openai':
         from crewai import LLM
+        deployment = overrides.get('model_name', os.getenv("AZURE_OPENAI_DEPLOYMENT"))
         return LLM(
-            model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            model=deployment,
             base_url=os.getenv("AZURE_OPENAI_ENDPOINT"),
             api_version=os.getenv("AZURE_OPENAI_VERSION"),
             api_key=os.getenv("AZURE_OPENAI_KEY"),
-            azure=True
         )
     elif provider == 'openai':
         from langchain_openai import ChatOpenAI
+        model = overrides.get('model_name', os.getenv("OPENAI_MODEL_NAME"))
+        temperature = overrides.get('temperature', 0)
         return ChatOpenAI(
-            temperature=config.get('temperature', 0),
-            model=os.getenv("OPENAI_MODEL_NAME"),
+            temperature=temperature,
+            model=model,
             api_key=os.getenv("OPENAI_API_KEY"),
         )
-    # Add more LLM providers here as needed
     else:
         raise ValueError(f"Unsupported LLM provider: {provider}")
+
 
 def create_embedder_client(config):
     provider = config['provider']

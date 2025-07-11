@@ -2,6 +2,8 @@ import os
 import json
 from jira import JIRA, JIRAError
 from crewai.tools import BaseTool
+from pydantic import Field
+from typing import List, Optional
 
 def _format_comments(jira_comments_field):
     """Helper function to format JIRA comments."""
@@ -36,30 +38,15 @@ class JiraTicketDetailsTool(BaseTool):
         "linked issues, parent, sub-tasks, epic children, and specified custom fields) "
         "using the ticket ID and returns a JSON-formatted string."
     )
+
+    custom_field_names_to_fetch: Optional[List[str]] = Field(default_factory=list)
+    epic_issue_type_names: Optional[List[str]] = Field(default_factory=lambda: ["Epic"])
     
     # --- INTERNAL CACHE ---
     _custom_field_id_map: dict[str, str] | None = None
 
     class Config:
         arbitrary_types_allowed = True
-
-    def __init__(self, 
-                 custom_field_names_to_fetch: list[str] = None, 
-                 epic_issue_type_names: list[str] = None, 
-                 **kwargs):
-        """
-        Initializes the tool.
-        Args:
-            custom_field_names_to_fetch (list[str], optional): 
-                A list of custom field names to fetch from Jira tickets. Defaults to an empty list.
-            epic_issue_type_names (list[str], optional): 
-                A list of strings that represent the 'Epic' issue type in your Jira instance. 
-                Defaults to ["Epic"].
-        """
-        super().__init__(**kwargs)
-        # Set the fields from the arguments, providing sensible defaults.
-        self.custom_field_names_to_fetch = custom_field_names_to_fetch or []
-        self.epic_issue_type_names = epic_issue_type_names or ["Epic"]
 
     def _resolve_custom_field_ids(self, jira_client: JIRA):
         """

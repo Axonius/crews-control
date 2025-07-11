@@ -109,6 +109,9 @@ def main():
     except FileNotFoundError:
         display_error(f"{EXECUTION_CONFIG_PATH} file not found for project {runtime_settings.project_name}")
 
+    if 'item' in execution_config.get('user_inputs', {}):
+        display_error("The user input 'item' is a reserved keyword for the 'for_each' feature. Please choose a different name.")
+
     display_message(f"Welcome to {runtime_settings.project_name}™")
 
     try:

@@ -5,7 +5,7 @@ import requests
 import logging # Use standard logging
 import http.client # Keep for optional debugging setup
 from io import BytesIO
-from typing import Dict, Literal, Optional, Type, Any, Tuple, List
+from typing import Dict, Literal, Optional, Type, Any, Tuple, List, Union
 from pydantic import BaseModel, Field, field_validator, model_validator, SecretStr, HttpUrl, ConfigDict
 from urllib.parse import urlparse
 
@@ -110,6 +110,19 @@ class AzureConfig(BaseModel):
                 raise ConnectionError(f"Failed to initialize Azure OpenAI client: {e}") from e
         return self
 
+class OpenAIConfig(BaseModel):
+    """Configuration for standard OpenAI Vision API."""
+    api_key: SecretStr
+    model: str
+    client: Optional[Any] = None
+
+    @model_validator(mode='after')
+    def init_client(self) -> 'OpenAIConfig':
+        if not OPENAI_AVAILABLE:
+            raise ImportError("Cannot initialize OpenAI client: 'openai' library is required.")
+        logger.info(f"Initializing standard OpenAI client for model: {self.model}")
+        self.client = openai.OpenAI(api_key=self.api_key.get_secret_value())
+        return self
 
 class JiraConfig(BaseModel):
     instance_url: HttpUrl
@@ -226,13 +239,13 @@ class AdvancedImageAnalyzerTool(BaseTool):
     args_schema: type[BaseModel] = AdvancedImageAnalyzerSchema
 
     # Configuration stored from init
-    _azure_config: Optional[AzureConfig] = None
+    _vision_config: Union[AzureConfig, OpenAIConfig]
     _jira_config: Optional[JiraConfig] = None
     _confluence_config: Optional[ConfluenceConfig] = None
 
     def __init__(
         self,
-        azure_config: AzureConfig, # Require Azure config for analysis
+        vision_config: Union[AzureConfig, OpenAIConfig],
         jira_config: Optional[JiraConfig] = None,
         confluence_config: Optional[ConfluenceConfig] = None,
         **kwargs
@@ -241,7 +254,7 @@ class AdvancedImageAnalyzerTool(BaseTool):
         Initializes the tool with necessary configurations.
 
         Args:
-            azure_config: Configuration for Azure OpenAI Vision API.
+            vision_config: A configuration object for either Azure or OpenAI.
             jira_config: Optional configuration for Jira access. Required if analyzing Jira attachments.
             confluence_config: Optional configuration for Confluence access. Required if analyzing Confluence attachments.
         """
@@ -251,11 +264,10 @@ class AdvancedImageAnalyzerTool(BaseTool):
         self._logger.info("Initializing AdvancedImageAnalyzerTool...")
 
         # --- Validate and Store Configurations ---
-        if not isinstance(azure_config, AzureConfig) or not azure_config.client:
-             # Client initialization happens within AzureConfig validation
-             raise ToolConfigurationError("Valid AzureConfig with initialized client is required.")
-        self._azure_config = azure_config
-        self._logger.info("Azure configuration loaded.")
+        if not vision_config or not vision_config.client:
+            raise ToolConfigurationError("A valid and initialized vision configuration (AzureConfig or OpenAIConfig) is required.")
+        self._vision_config = vision_config
+        self._logger.info("Vision configuration loaded.")
 
         if jira_config:
              if not JIRA_AVAILABLE:
@@ -502,54 +514,52 @@ class AdvancedImageAnalyzerTool(BaseTool):
         self._logger.info(f"Encoded image to base64 data URI (MIME: {mime_type}, Length: {len(data_uri)}).")
         return data_uri
 
-    def _call_azure_vision_api(self, data_uri: str, prompt: str) -> str:
-        """Calls the configured Azure Vision API."""
-        if not self._azure_config or not self._azure_config.client:
-             # This should be caught at init, but double-check
-             raise ToolConfigurationError("Azure Vision API client is not configured.")
-
-        client = self._azure_config.client
-        deployment = self._azure_config.vision_deployment
-        self._logger.info(f"Calling Azure Vision API (Deployment: {deployment}). Prompt: '{prompt[:100]}...'")
+    def _call_vision_api(self, data_uri: str, prompt: str) -> str:
+        """Dynamically calls the correct vision API based on configuration."""
+        client = self._vision_config.client
+        
+        if isinstance(self._vision_config, AzureConfig):
+            model_name = self._vision_config.vision_deployment
+            self._logger.info(f"Calling Azure Vision API (Deployment: {model_name}).")
+        elif isinstance(self._vision_config, OpenAIConfig):
+            model_name = self._vision_config.model
+            self._logger.info(f"Calling standard OpenAI Vision API (Model: {model_name}).")
+        else:
+            raise ToolConfigurationError("Invalid vision API configuration provided.")
 
         try:
-            api_response = client.chat.completions.create(
-                model=deployment,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {"type": "image_url", "image_url": {"url": data_uri}},
-                        ],
-                    }
-                ],
-                # max_completion_tokens=1500,
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": data_uri}},
+                    ],
+                }],
+                max_tokens=4096
             )
-
-            description = api_response.choices[0].message.content
+            
+            description = response.choices[0].message.content
             if not description:
-                 self._logger.warning("Received empty description from Vision API.")
-                 # Decide if empty response is an error or valid result
-                 # raise VisionApiError("Received empty description from Vision API.")
-                 return "(Vision API returned an empty description)" # Or return specific string
-
+                self._logger.warning("Received empty description from Vision API.")
+                return "(Vision API returned an empty description)"
+            
             self._logger.info("Received description from Vision API successfully.")
             return description.strip()
 
         except openai.APIConnectionError as e:
-             self._logger.error(f"Azure OpenAI connection error: {e}", exc_info=True)
-             raise VisionApiError(f"Could not connect to Azure OpenAI: {e}") from e
+            self._logger.error(f"API connection error: {e}", exc_info=True)
+            raise VisionApiError(f"Could not connect to the API: {e}") from e
         except openai.RateLimitError as e:
-             self._logger.error(f"Azure OpenAI rate limit exceeded: {e}", exc_info=False)
-             raise VisionApiError(f"Azure OpenAI rate limit exceeded. Please try again later.") from e
+            self._logger.error(f"API rate limit exceeded: {e}", exc_info=False)
+            raise VisionApiError(f"API rate limit exceeded. Please try again later.") from e
         except openai.APIStatusError as e:
-             self._logger.error(f"Azure OpenAI API error: Status={e.status_code}, Response={e.response}", exc_info=True)
-             raise VisionApiError(f"Azure OpenAI API returned an error (Status {e.status_code}). Check deployment name and API key/endpoint.") from e
+            self._logger.error(f"API status error: Status={e.status_code}, Response={e.response}", exc_info=True)
+            raise VisionApiError(f"API returned an error (Status {e.status_code}). Check deployment name and API key/endpoint.") from e
         except Exception as e:
-             self._logger.error(f"Unexpected error during Vision API call: {e}", exc_info=True)
-             raise VisionApiError(f"An unexpected error occurred during image analysis: {e}") from e
-
+            self._logger.error(f"Unexpected error during Vision API call: {e}", exc_info=True)
+            raise VisionApiError(f"An unexpected error occurred during image analysis: {e}") from e
 
     # --- Main Execution Method (`_run`) ---
     def _run(
@@ -597,7 +607,7 @@ class AdvancedImageAnalyzerTool(BaseTool):
 
                 data_uri = self._to_base64_data_uri(image_bytes)
                 del image_bytes
-                description = self._call_azure_vision_api(data_uri, analysis_prompt)
+                description = self._call_vision_api(data_uri, analysis_prompt)
                 
                 self._logger.info(f"Analysis successful for '{reference}'.")
                 all_results.append(f"Result for '{reference}':\n{description}")

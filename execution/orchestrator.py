@@ -97,42 +97,101 @@ def execute_crews(project_name: str,
                 }
                 continue
 
-        rich.print(f"[white bold]Running crew <{acting_crew}> [/white bold]")
-        try:
-            crew_run_raw_or_obj_result: Union[CrewOutput, str] = CrewRunner(
-                project_name=project_name,
-                crew_name=acting_crew,
-                crew_config=crew_config,
-                user_inputs=user_inputs,
-                previous_crews_results=crews_results, # Pass the full structured results
-                llm=llm,
-                embedding_model=embedding_model,
-                should_export_results=(execution_config.get('settings') or {}).get('output_results'),
-                ignore_cache=ignore_cache,
-                guardrail_verbose_logging=True,
-
-            ).run_crew()
-            if isinstance(crew_run_raw_or_obj_result, CrewOutput):
-                # If it's a CrewOutput object, get its raw string content
-                result_output: str = crew_run_raw_or_obj_result.raw
-            else:
-                # Otherwise, it's already a string (from cache, or an error message string)
-                result_output: str = str(crew_run_raw_or_obj_result) # Ensure it's a string just in case
-            # Wrap the successful result in the new structure
-            crews_results[acting_crew] = {
-                "status": "SUCCESS",
-                "output": result_output
+        # Check if the crew should be run as an iterator
+        if 'for_each' in crew_config:
+            rich.print(f"[cyan bold]Executing iterator crew <{acting_crew}>[/cyan bold]")
+            
+            list_source_template = crew_config['for_each']
+            
+            # Build the context for formatting from previous results and user inputs
+            formatting_context = {
+                crew_name: result.get('output', '')
+                for crew_name, result in crews_results.items()
             }
+            formatting_context.update(user_inputs)
 
-        except Exception as e:
-            # Handle unexpected failures during crew execution
-            rich.print(f"[bold red]An unexpected error occurred while running crew <{acting_crew}>: {e}[/bold red]")
-            crews_results[acting_crew] = {
-                "status": "FAILED",
-                "output": str(e)
-            }
-            if os.getenv('EXIT_ON_ERROR', 'False').lower() == 'true':
-                os._exit(1)
+            try:
+                # Evaluate the template to get the final string, then parse as JSON
+                evaluated_list_string = list_source_template.format(**formatting_context)
+                items_to_iterate = json.loads(evaluated_list_string)
+
+                if not isinstance(items_to_iterate, list):
+                    raise TypeError("The evaluated 'for_each' template must result in a JSON list.")
+
+            except (json.JSONDecodeError, TypeError, KeyError) as e:
+                error_msg = f"Failed to resolve 'for_each' for crew <{acting_crew}>. The template or source output was invalid. Error: {e}"
+                rich.print(f"[bold red]{error_msg}[/bold red]")
+                crews_results[acting_crew] = {"status": "FAILED", "output": error_msg}
+                continue
+
+            iteration_results = []
+            for index, item in enumerate(items_to_iterate):
+                rich.print(f"[cyan]  - Running iteration {index + 1}/{len(items_to_iterate)} for <{acting_crew}>[/cyan]")
+                
+                # Inject the current item into the inputs for this specific run
+                iteration_user_inputs = user_inputs.copy()
+                iteration_user_inputs['item'] = item
+                
+                # The iterator crew runs its own definition for each item
+                try:
+                    result: Union[CrewOutput, str] = CrewRunner(
+                        project_name=project_name,
+                        crew_name=f"{acting_crew}_iteration_{index}", # Dynamic name for caching
+                        crew_config=crew_config, # Use its own config
+                        user_inputs=iteration_user_inputs,
+                        previous_crews_results=crews_results,
+                        llm=llm,
+                        embedding_model=embedding_model,
+                        should_export_results=(execution_config.get('settings') or {}).get('output_results'),
+                        ignore_cache=ignore_cache,
+                    ).run_crew()
+                    iteration_results.append(result)
+                except Exception as e:
+                    error_msg = f"Error in iteration {index} for crew <{acting_crew}>: {e}"
+                    rich.print(f"[bold red]{error_msg}[/bold red]")
+                    iteration_results.append({"error": error_msg})
+
+            # Aggregate all iteration results into the output for the main iterator crew
+            crews_results[acting_crew] = {"status": "SUCCESS", "output": json.dumps(iteration_results, indent=2)}
+        
+        else:
+            # running a standard, non-iterating crew
+            rich.print(f"[white bold]Running crew <{acting_crew}> [/white bold]")
+            try:
+                crew_run_raw_or_obj_result: Union[CrewOutput, str] = CrewRunner(
+                    project_name=project_name,
+                    crew_name=acting_crew,
+                    crew_config=crew_config,
+                    user_inputs=user_inputs,
+                    previous_crews_results=crews_results, # Pass the full structured results
+                    llm=llm,
+                    embedding_model=embedding_model,
+                    should_export_results=(execution_config.get('settings') or {}).get('output_results'),
+                    ignore_cache=ignore_cache,
+                    guardrail_verbose_logging=True,
+    
+                ).run_crew()
+                if isinstance(crew_run_raw_or_obj_result, CrewOutput):
+                    # If it's a CrewOutput object, get its raw string content
+                    result_output: str = crew_run_raw_or_obj_result.raw
+                else:
+                    # Otherwise, it's already a string (from cache, or an error message string)
+                    result_output: str = str(crew_run_raw_or_obj_result) # Ensure it's a string just in case
+                # Wrap the successful result in the new structure
+                crews_results[acting_crew] = {
+                    "status": "SUCCESS",
+                    "output": result_output
+                }
+    
+            except Exception as e:
+                # Handle unexpected failures during crew execution
+                rich.print(f"[bold red]An unexpected error occurred while running crew <{acting_crew}>: {e}[/bold red]")
+                crews_results[acting_crew] = {
+                    "status": "FAILED",
+                    "output": str(e)
+                }
+                if os.getenv('EXIT_ON_ERROR', 'False').lower() == 'true':
+                    os._exit(1)
 
         if validations and acting_crew in validations:
             # First, ensure the crew we want to validate was actually successful

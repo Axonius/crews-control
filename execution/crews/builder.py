@@ -44,7 +44,8 @@ class CrewRunner:
         self._crew_config: dict = crew_config
         self._project_name: str = project_name
         self._previous_results: dict = previous_crews_results # Contains {'status': '...', 'output': '...'}
-        self._llm, self._embedding_model = llm, embedding_model
+        self._llm_clients: Dict[str, Any] = {'default': llm} # The 'llm' passed in is the default client, stored in a cache.
+        self._embedding_model = embedding_model
         self._crew_context: typing.Optional[dict] = None
         self._ignore_cache: bool = ignore_cache
 
@@ -69,6 +70,59 @@ class CrewRunner:
 
         # validate crew parameters (agents/tasks presence)
         self.validate_crew_parameters()
+
+    def _get_llm_client(self, model_config: Optional[dict] = None) -> Any:
+        """
+        Gets an LLM client based on a model configuration object from the YAML.
+        If no config is provided, returns the default client. Caches clients for reuse.
+        """
+        if not model_config:
+            return self._llm_clients['default']
+
+        provider = model_config.get('provider')
+        if not provider:
+            rich.print(f"[bold red]Error: 'llm_model' config for an agent is missing the 'provider' key. Using default LLM.[/bold red]")
+            return self._llm_clients['default']
+            
+        model_name = model_config.get('model_name')
+        cache_key = f"{provider}-{model_name}" if model_name else provider
+
+        if cache_key in self._llm_clients:
+            rich.print(f"[blue]Using cached LLM client for: {cache_key}[/blue]")
+            return self._llm_clients[cache_key]
+
+        rich.print(f"[yellow]Initializing new LLM client for: {cache_key}...[/yellow]")
+        try:
+            llm_config_path = Path('config') / 'llms' / f'{provider}.json'
+            if not llm_config_path.exists():
+                raise FileNotFoundError(f"LLM config file not found for provider '{provider}' at {llm_config_path}")
+            
+            base_config = load_config(llm_config_path)
+            
+            # Call the factory with the base config and the specific overrides from the YAML
+            new_client = create_llm_client(base_config, overrides=model_config)
+            
+            self._llm_clients[cache_key] = new_client
+            return new_client
+
+        except Exception as e:
+            rich.print(f"[bold red]Error: Failed to create LLM client for '{cache_key}'. Using default LLM as fallback. Error: {e}[/bold red]")
+            return self._llm_clients['default']
+
+    def _check_output_condition(self, condition: dict, output_text: str) -> bool:
+        """Evaluates if the output text meets all specified conditions."""
+        checks = []
+    
+        if 'output_contains' in condition:
+            expected = condition['output_contains']
+            checks.append(expected.strip().upper() in output_text.strip().upper())
+    
+        if 'output_not_contains' in condition:
+            forbidden = condition['output_not_contains']
+            checks.append(forbidden.strip().upper() not in output_text.strip().upper())
+    
+        # All conditions must be satisfied (logical AND)
+        return all(checks) if checks else True
 
     def _parse_and_get_tools(self, tools_config: list, tool_scope: typing.Optional[str] = None) -> list:
         """Parses the tool configuration from YAML and returns a list of instantiated tool objects."""
@@ -284,6 +338,9 @@ class CrewRunner:
                 tool_scope=agent_scope
             )
 
+            agent_llm_config = agent_config.get('llm_model') # Get the specific LLM configuration object for this agent
+            agent_llm_client = self._get_llm_client(agent_llm_config) # and fetch the corresponding LLM client
+
             # Agent role, goal, backstory are evaluated here.
             # These should use the *full* context including resolved inputs if they are configured for agents.
             # Assuming agent_scope implies task_name for resolved_inputs
@@ -293,7 +350,7 @@ class CrewRunner:
                 tools=agent_tools,
                 backstory=self._evaluate_input(agent_config['backstory'], task_name=agent_scope),
                 allow_delegation=False,
-                llm=self._llm,
+                llm=agent_llm_client,
                 embedding_model=self._embedding_model,
                 verbose=True,
                 memory=True,
@@ -378,12 +435,53 @@ class CrewRunner:
         return Path.cwd() / 'projects' / self._project_name / 'output' / self._output_file
 
     def run_crew(self) -> str:
-        export_path: Path = self._get_export_path()
-        if not self._ignore_cache and export_path.exists():
-            cached_content = export_path.read_text()
-            rich.print(f"[yellow bold]Using cached result for <{self._crew_name}>[/yellow bold]")
-            return cached_content # Return the plain string directly from cache
+        run_until_config = self._crew_config.get('run_until')
+        if not run_until_config:
+            export_path: Path = self._get_export_path()
+            if not self._ignore_cache and export_path.exists():
+                cached_content = export_path.read_text()
+                rich.print(f"[yellow bold]Using cached result for <{self._crew_name}>[/yellow bold]")
+                return cached_content # Return the plain string directly from cache
+            return self._execute_crew_with_error_handling()
 
+        max_retries = run_until_config.get('max_retries', 3)        
+        if max_retries == 0:
+            raise ValueError("max_retries=0 is invalid. To run once, remove the 'run_until' block entirely.")
+        if max_retries < -1:
+            raise ValueError("max_retries must be -1 for infinite retries or a positive integer (>= 1) for limited retries.")
+
+        delay = run_until_config.get('delay_seconds', 0)
+        condition = run_until_config.get('condition', {})
+        rich.print(f"[cyan bold]Crew <{self._crew_name}> will run until condition is met (max {max_retries} retries).[/cyan bold]")
+
+        attempt = 0
+        final_result_raw = ""
+        
+        while max_retries == -1 or attempt < max_retries:
+            attempt += 1
+            rich.print(f"[cyan]Attempt {attempt}/{max_retries} for crew <{self._crew_name}>...[/cyan]")
+            self._ignore_cache = True # Force cache to be ignored during looping
+            result_raw = self._execute_crew_with_error_handling()
+            final_result_raw = result_raw # Always store the latest result
+            if self._check_output_condition(condition, result_raw):
+                rich.print(f"[green bold]Condition met for <{self._crew_name}>. Proceeding.[/green bold]")
+                break # Exit the loop on success
+
+            rich.print(f"[yellow]Condition not met for <{self._crew_name}>.[/yellow]")
+            if attempt < max_retries:
+                if delay > 0:
+                    rich.print(f"[yellow]Waiting {delay} seconds before next attempt...[/yellow]")
+                    time.sleep(delay)
+            else:
+                rich.print(f"[red bold]Max retries reached for <{self._crew_name}>. Using the last result.[/red bold]")
+
+        final_output_obj = CrewOutput(raw=final_result_raw, pydantic_output=None, tasks_output=[])
+        self._export_results(final_output_obj)
+        
+        return final_result_raw
+
+    def _execute_crew_with_error_handling(self) -> str:
+        """Encapsulates the core crew execution and transient error retries."""
         max_retries = 5
         retry_count = 0
         backoff_factor = 2
@@ -395,9 +493,13 @@ class CrewRunner:
                     tasks=self._get_crew_tasks(),
                     verbose=True
                 ).kickoff()
-                self._export_results(results)
-                return results.raw
+                
+                # In the looping case, the final export is handled outside this method.
+                # In the single-run case, this export is the one that runs.
+                if not self._crew_config.get('run_until'):
+                    self._export_results(results)
 
+                return results.raw
             except Exception as e:
                 error_code = self._extract_error_code(e)
                 rich.print(f"[red bold]Error occurred while running crew <{self._crew_name}>[/red bold]")
@@ -412,7 +514,7 @@ class CrewRunner:
                         os._exit(1)
                     return str(e)
 
-        rich.print(f"[red bold]Exceeded maximum retries. Aborting...[/bold red]")
+        rich.print(f"[red bold]Exceeded maximum retries for transient errors. Aborting...[/bold red]")
         return "Rate limit error: Exceeded maximum retries"
 
     def _extract_error_code(self, exception: Exception) -> str:

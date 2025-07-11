@@ -18,7 +18,10 @@ from tools.custom.git_search_tool import GitSearchTool
 from tools.custom.fetch_file_content_tool import GitFileContentQueryTool
 from tools.custom.github_fetch_file_paginated import GitHubFilePaginator
 from tools.custom.confluence_fetch import ConfluenceDataQueryTool
-from tools.custom.image_analyzer_tool import AdvancedImageAnalyzerTool, AzureConfig, JiraConfig, ConfluenceConfig
+from tools.custom.image_analyzer_tool import (
+    AdvancedImageAnalyzerTool, AzureConfig, OpenAIConfig, JiraConfig, ConfluenceConfig
+)
+
 
 from langchain_community.agent_toolkits.load_tools import load_tools
 from utils import validate_env_vars, EnvironmentVariableNotSetError
@@ -123,6 +126,57 @@ def get_jira_link_pairs() -> list[tuple[str, str]]:
             allowed_pairs.append(tuple(parts))
     return allowed_pairs
 
+def get_image_analyzer_tool(**kwargs):
+    """
+    Initializes the AdvancedImageAnalyzerTool with either Azure or OpenAI vision config,
+    based on available environment variables.
+    """
+    # Conditionally create Jira and Confluence configs if ENVs are set
+    jira_config = None
+    if all(os.getenv(k) for k in ['JIRA_INSTANCE_URL', 'JIRA_USERNAME', 'JIRA_API_TOKEN']):
+        jira_config = JiraConfig(
+            instance_url=os.environ['JIRA_INSTANCE_URL'],
+            username=os.environ['JIRA_USERNAME'],
+            api_token=os.environ['JIRA_API_TOKEN']
+        )
+
+    confluence_config = None
+    if all(os.getenv(k) for k in ['CONFLUENCE_ENDPOINT', 'CONFLUENCE_API_USER', 'CONFLUENCE_API_TOKEN']):
+        confluence_config = ConfluenceConfig(
+            endpoint_url=os.environ['CONFLUENCE_ENDPOINT'],
+            username=os.environ['CONFLUENCE_API_USER'],
+            api_token=os.environ['CONFLUENCE_API_TOKEN']
+        )
+
+    # Decide between Azure and OpenAI for vision based on which ENVs are set
+    vision_config = None
+    if os.getenv("AZURE_API_BASE") and os.getenv("AZURE_API_KEY"):
+        print("INFO: Found Azure environment variables. Initializing Image Analyzer with Azure.")
+        vision_config = AzureConfig(
+            api_key=os.environ["AZURE_API_KEY"],
+            endpoint=os.environ["AZURE_API_BASE"],
+            api_version=os.environ["AZURE_API_VERSION"],
+            vision_deployment=os.environ["AZURE_OPENAI_VISION_DEPLOYMENT"]
+        )
+    elif os.getenv("OPENAI_API_KEY") and os.getenv("OPENAI_VISION_MODEL"):
+        print("INFO: Azure variables not found. Initializing Image Analyzer with standard OpenAI.")
+        vision_config = OpenAIConfig(
+            api_key=os.environ["OPENAI_API_KEY"],
+            model=os.environ["OPENAI_VISION_MODEL"]
+        )
+    else:
+        # If neither is configured, the tool will not be functional.
+        # We can let it fail here or allow it to initialize and fail later.
+        # For now, we let it proceed, and the tool's __init__ will raise an error.
+        pass
+
+    return AdvancedImageAnalyzerTool(
+        vision_config=vision_config,
+        jira_config=jira_config,
+        confluence_config=confluence_config,
+        **kwargs
+    )
+
 _TOOLS_MAP: dict[str, Callable] = {
     'human': lambda: HumanTool(),
     'read_file': lambda: load_tools(['read_file'])[0],
@@ -164,25 +218,7 @@ _TOOLS_MAP: dict[str, Callable] = {
     'jira_get_issue_details': lambda **kwargs: JiraTicketDetailsTool(**kwargs),
     'confluence': lambda **kwargs: ConfluenceDataQueryTool(**kwargs),
     'FinalAnswerTool': lambda **kwargs: FinalAnswerTool(**kwargs),
-    'image_analyzer_tool': lambda **kwargs: AdvancedImageAnalyzerTool(
-         AzureConfig(
-            api_key=os.environ["AZURE_API_KEY"],
-            endpoint=os.environ["AZURE_API_BASE"],
-            api_version=os.environ["AZURE_API_VERSION"],
-            vision_deployment=os.environ["AZURE_OPENAI_VISION_DEPLOYMENT"]
-        ),
-        JiraConfig(
-            instance_url=os.environ['JIRA_INSTANCE_URL'],
-            username=os.environ['JIRA_USERNAME'],
-            api_token=os.environ['JIRA_API_TOKEN']
-        ),
-        ConfluenceConfig(
-            endpoint_url=os.environ['CONFLUENCE_ENDPOINT'],
-            username=os.environ['CONFLUENCE_API_USER'],
-            api_token=os.environ['CONFLUENCE_API_TOKEN']
-        ),
-        **kwargs
-    ),
+    'image_analyzer_tool': get_image_analyzer_tool,
 }
 
 class FinalAnswerTool(BaseTool):
@@ -202,7 +238,6 @@ required_vars = [
     "JIRA_SETPRIORITY_ALLOWED_PREFIXES",
     "JIRA_REASSIGN_ALLOWED_PREFIXES",
     "GITHUB_TOKEN",
-    "SERPER_API_KEY",
     "LLM_NAME",
     "EMBEDDER_NAME",
     "CONFLUENCE_ENDPOINT",

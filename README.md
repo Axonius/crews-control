@@ -9,14 +9,36 @@ This project builds upon the following MIT-licensed project:
 
 **Crews Control** is an abstraction layer on top of [crewAI](https://www.crewai.com/), designed to facilitate the creation and execution of AI-driven projects without writing code. By defining an `execution.yaml` file, users can orchestrate AI crews to accomplish complex tasks using predefined or custom tools.
 
+## Core Concepts & Architecture
+
+Crews Control orchestrates workflows by connecting a few key components defined in your `execution.yaml`.
+
+* **Orchestrator:** The engine that reads your YAML and manages the overall workflow.
+* **Crew:** A group of Agents assigned to complete a set of related Tasks.
+* **Agent:** An autonomous AI worker with a specific role, goal, and set of Tools.
+* **Task:** A single, well-defined unit of work performed by an Agent.
+
+The relationship between these components follows this high-level architecture:
+
+```mermaid
+graph TD;
+    A[execution.yaml] --> B(Crews Control Orchestrator);
+    B --> C{Crew 1};
+    B --> D{Crew 2};
+    C --> E[crewAI Agents/Tasks];
+    D --> F[crewAI Agents/Tasks];
+    E --> G([Output Artifact]);
+    F --> H([Output Artifact]);
+```
+
 ## Features
 
-  - **No-Code AI Orchestration:** Define projects with `execution.yaml`, specifying crews, agents, and tasks.
-  - **Advanced Conditional Logic:** Orchestrate complex workflows with `and`/`or` dependencies based on crew status (`SUCCESS`, `SKIPPED`) or output content (`output_contains`, `output_not_contains`).
-  - **Dynamic Task Inputs:** Define task inputs (`description`, `expected_output`, etc.) dynamically at runtime based on the outcomes of previous crews using a `resolved_inputs` block.
-  - **Modular Tools:** Use a set of predefined tools or create custom ones.
-  - **Artifact Generation:** Each crew outputs a file artifact from the final task.
-  - **Templated Outputs:** Access outputs from previous crews’ tasks using a powerful templating syntax.
+- **No-Code AI Orchestration:** Define projects with `execution.yaml`, specifying crews, agents, and tasks.
+- **[Advanced Conditional Logic & Control Flow](#2-conditional-dependencies-dependson):** Orchestrate complex workflows with `and`/`or` dependencies, `run_until` loops, and `for_each` iterators.
+- **[Per-Agent LLM Configuration](#6-per-agent-llms-llm_model):** Assign specific LLM providers and models to individual agents for fine-tuned performance and cost optimization.
+- **[Dynamic & External Inputs](#5-external-content-the-context-block):** Define task inputs dynamically based on previous outcomes and load content from external files.
+- **Modular Tools:** Use predefined tools or create your own to inject functionality into tasks.
+- **[Deterministic Artifact Generation](#4-deterministic-naming-sha256):** Create unique, consistent output filenames based on input content.
 
 ## Licensing
 
@@ -214,108 +236,373 @@ Example - run the `pr-security-review` project to review `PR #1` of the `Axonius
 make run project_name=pr-security-review PARAMS="github_repo_name='Axonius/crews-control' pr_number='1'"
 ```
 
-### Creating a Project
+## Creating a Project: From Basic to Advanced
 
-1.  Create a subfolder `projects/project_name`.
-2.  Inside the subfolder, create a file named `execution.yaml`. The file can have the following structure:
+To get started, every project requires its own folder and a main `execution.yaml` file.
+
+1.  **Create a Project Folder:** All projects live inside the `/projects` directory.
+    ```bash
+    mkdir projects/my-new-project
+    ```
+2.  **Create an `execution.yaml` File:** Inside your new folder, create the main configuration file.
+    ```bash
+    touch projects/my-new-project/execution.yaml
+    ```
+
+> **Pro-Tip:** You can use the built-in `bot-generator` project to create a boilerplate `execution.yaml` for you.
+
+The following sections provide self-contained examples of what you can put inside your `execution.yaml` file, each demonstrating a core feature.
+
+-----
+
+### 1\. Basic Dependency
+
+This is the simplest functional project. It defines two crews. `writer_crew` has a `depends_on` block, ensuring it only runs after `research_crew` is finished. The output of the first crew is available as a `{research_crew}` placeholder.
 
 ```yaml
-settings:
-  output_results: true
-
 user_inputs:
-  user_input_1:
-    title: "User input 1"
-  user_input_2:
-    title: "User input 2"
-
+  topic:
+    title: "Blog Post Topic"
 crews:
-  data_gathering_crew:
-    output_naming_template: 'output_data_gathering_{user_input_1}.md'
+  research_crew:
     agents:
-      data_gatherer_agent:
-        role: "Data Gatherer"
-        goal: "Gather initial data based on {user_input_1} and {user_input_2}."
+      researcher:
+        role: "Researcher"
+        goal: "Find 3 key facts about {topic}."
         tools: [human]
-        backstory: "An agent that collects initial information."
+        backstory: "An expert researcher."
     tasks:
-      gather_task:
-        agent: data_gatherer_agent
-        description: "Collect data based on {user_input_1}."
-        expected_output: "A summary of the gathered data."
-
-  triage_crew:
+      research_task:
+        agent: researcher
+        description: "Please provide 3 key facts about {topic}."
+        expected_output: "A bulleted list."
+  writer_crew:
     depends_on:
-      - data_gathering_crew
-    output_naming_template: 'output_triage_{user_input_1}.md'
+      - research_crew
     agents:
-      triage_agent:
-        role: "Triage Specialist"
-        goal: "Analyze data and decide if a full analysis is needed."
-        tools: [human]
-        backstory: "An agent that makes decisions based on initial data."
+      writer:
+        role: "Writer"
+        goal: "Write a short paragraph based on the research."
+        tools: []
+        backstory: "A skilled writer."
     tasks:
-      triage_task:
-        agent: triage_agent
-        description: "Analyze the output from the data gathering crew: {data_gathering_crew}. If a deep analysis is needed, your final answer must contain the phrase 'FULL_ANALYSIS_REQUIRED'."
-        expected_output: "A decision string, either containing 'FULL_ANALYSIS_REQUIRED' or not."
+      write_task:
+        agent: writer
+        description: "Write a paragraph based on these facts:\n{research_crew}"
+        expected_output: "A single paragraph."
+```
+-----
 
-  deep_analysis_crew:
-    # FEATURE: Advanced conditional dependencies
+### 2\. Conditional Dependencies (`depends_on`)
+
+You can create powerful, branching workflows by adding a `condition` block to any dependency. The `condition` block supports three keys, which are checked with logical **AND** if multiple are used within the same condition.
+
+  * `output_contains`: The crew runs if this string **is found** in the dependency's output.
+  * `output_not_contains`: The crew runs if this string is **not found** in the dependency's output.
+  * `status`: The crew runs if the dependency finished with a specific status (e.g., `SUCCESS`, `SKIPPED`).
+
+You can combine multiple dependencies using `and` or `or` for complex scenarios. In the example below, the `escalation_crew` runs if **either** the manager explicitly says to escalate, **or** if a vulnerability was found **and** the manager was unavailable (i.e., their crew was skipped).
+
+```yaml
+user_inputs:
+  scan_target:
+    title: "Scan Target"
+crews:
+  analysis_crew:
+    agents:
+      analyzer:
+        role: "Security Analyzer"
+        goal: "Analyze the target and report vulnerabilities."
+    tasks:
+      analyze_task:
+        agent: analyzer
+        description: "Scan {scan_target}. If clean, respond with 'Target is CLEAN'."
+
+  manager_approval_crew:
+    # This crew only runs if the analysis is NOT clean
     depends_on:
-      and: # This crew runs only if BOTH conditions below are met
-        - crew: data_gathering_crew # Condition 1: a simple dependency
-        - crew: triage_crew # Condition 2: a dependency with a specific condition
+      - crew: analysis_crew
+        condition:
+          output_not_contains: 'CLEAN'
+    agents:
+      manager:
+        role: "Manager"
+        goal: "Approve security findings for escalation."
+        tools: [human]
+    tasks:
+      approval_task:
+        agent: manager
+        description: "Findings for {scan_target}:\n{analysis_crew}\nRespond with 'ESCALATE' or 'IGNORE'."
+
+  escalation_crew:
+    depends_on:
+      or:
+        # Case 1: The manager explicitly approved escalation.
+        - crew: manager_approval_crew
           condition:
-            output_contains: 'FULL_ANALYSIS_REQUIRED'
-    output_naming_template: 'output_deep_analysis_{user_input_1}.md'
+            output_contains: 'ESCALATE'
+        # Case 2: The analysis found something AND the manager was unavailable to review it.
+        - and:
+            - crew: analysis_crew
+              condition:
+                output_not_contains: 'CLEAN'
+            - crew: manager_approval_crew
+              status: 'SKIPPED'
     agents:
-      analysis_agent:
-        role: "Analysis Expert"
-        goal: "Perform a deep analysis."
-        tools: [human]
-        backstory: "An agent that performs in-depth analysis."
+      escalator:
+        role: "Escalation Lead"
+        goal: "Handle the security escalation."
     tasks:
-      analysis_task:
-        agent: analysis_agent
-        description: "Perform a deep and thorough analysis based on the initial data from {data_gathering_crew}."
-        expected_output: "A detailed report of the findings."
+      escalation_task:
+        agent: escalator
+        description: "Handle the security escalation for {scan_target} based on these findings:\n{analysis_crew}"
+```
 
-  final_summary_crew:
-    # depends_on can also be used structurally to ensure execution order
-    depends_on:
-      - deep_analysis_crew
-      - triage_crew
-    output_naming_template: 'output_final_summary_{user_input_1}.md'
+-----
+
+### 3\. Looping with `run_until`
+
+A crew can be set to run repeatedly until its output meets specific conditions. This `validator_crew` will run up to 5 times until its output contains "SUCCESS" **and** does not contain "ERROR". This is ideal for polling, validation, or self-correction loops.
+
+```yaml
+crews:
+  validator_crew:
+    run_until:
+      max_retries: 5
+      delay_seconds: 10
+      condition:
+        output_contains: "SUCCESS"
+        output_not_contains: "ERROR"
     agents:
-      summary_agent:
-        role: "Summarizer"
-        goal: "Create a final summary of the entire process."
+      validator:
+        role: "Validator"
+        goal: "Validate a process and report its status."
         tools: [human]
-        backstory: "An agent that compiles final reports."
     tasks:
-      summary_task:
-        agent: summary_agent
-        # The description is built dynamically using a resolved input
-        description: "{summary_introduction} Based on this, create a final, concise summary."
-        expected_output: "A final, easy-to-read summary document."
-        # FEATURE: Dynamic input resolution
+      validation_task:
+        agent: validator
+        description: "Please check the system status. If it's fully operational, respond with 'STATUS: SUCCESS'. If there is a problem, respond with 'STATUS: ERROR'."
+```
+
+**How it Works:**
+
+  * The crew's output is checked after each run. All conditions in the `condition` block must be satisfied.
+  * The loop will only stop when the output contains "SUCCESS" **AND** does not contain "ERROR".
+  * If conditions are not met, it will retry until `max_retries` is reached.
+  * **Note:** Set `max_retries: -1` for an infinite loop, which is useful for service-like polling.
+
+#### Special Values
+
+| Value             | Meaning                                    |
+| ----------------- | ------------------------------------------ |
+| `max_retries: -1` | Infinite retries (loop until success)      |
+| `max_retries: 1+` | Retry that many times at most              |
+| `max_retries: 0`  | ❌ Invalid — remove `run_until` to run once |
+| `< -1`            | ❌ Invalid — will raise an error            |
+
+#### Notes
+
+* `delay_seconds` is optional but useful for rate limits or external dependencies.
+* You can omit either `output_contains` or `output_not_contains` if only one condition is needed.
+* Cached outputs are always ignored during retries to ensure fresh execution.
+-----
+
+### 4\. Iterating with `for_each`
+
+The for_each property configures a crew to run its logic for every item in a list, making it ideal for processing a variable number of items like file chunks, search results, or API responses.
+
+This property takes a string value that must resolve to a valid JSON array. This provides flexibility in how the list of items is generated: it can be hardcoded directly into the workflow, or dynamically generated by a previous crew's output.
+
+**Example with a Hardcoded List:**
+```yaml
+crews:
+  security_review_iterator:
+    # The list of items is defined directly as a static JSON array string.
+    for_each: '["User Onboarding", "Admin Dashboard", "Payment Gateway"]'
+
+    agents:
+      reviewer:
+        role: "Security Analyst"
+        goal: "Brainstorm threats for a specific software feature."
+
+    tasks:
+      brainstorm_task:
+        agent: reviewer
+        description: "List 3 potential security threats for the '{item}' feature."
+        expected_output: "A bulleted list of three threats."
+```
+
+**Example with a Dynamically Generated List:**
+```yaml
+user_inputs:
+  topic:
+    title: "Topic to research"
+crews:
+  # 1. This crew generates a list of sub-topics
+  sub_topic_generator_crew:
+    agents:
+      planner:
+        role: "Planner"
+        goal: "Generate a list of 3 related sub-topics for {topic}."
+    tasks:
+      generate_task:
+        agent: planner
+        description: "Generate 3 sub-topics related to {topic}."
+        expected_output: >
+          A single JSON array string. Example: ["Sub-topic A", "Sub-topic B", "Sub-topic C"]
+
+  # 2. This crew iterates over the list from the previous crew
+  research_iterator_crew:
+    depends_on: [sub_topic_generator_crew]
+    for_each: "{sub_topic_generator_crew}"
+
+    # The rest of the definition is a normal crew
+    agents:
+      researcher:
+        role: "Researcher"
+        goal: "Find key facts about a sub-topic."
+    tasks:
+      research_task:
+        agent: researcher
+        description: "Find 3 key facts about this specific sub-topic: {item}"
+        expected_output: "A bulleted list of 3 facts for the sub-topic."
+```
+
+#### How it Works:
+
+- **`for_each: "{...}"`**: This property on a crew triggers the iteration. Its value is a template that must resolve to a JSON array string.
+- **`{item}` Placeholder**: This is a special, reserved keyword. For each iteration, the framework replaces `{item}` with the current value from the list.
+- **Aggregated Output**: The final output of the iterator crew (e.g., `{research_iterator_crew}`) will be a single JSON array string containing the results from all the individual runs.
+
+### 5\. Per-Agent LLM Assignment
+
+Optimize for cost and performance by assigning different LLMs to different agents. In this example, the `researcher` uses a fast, inexpensive model, while the `writer` uses a more powerful, creative model.
+
+```yaml
+user_inputs:
+  topic:
+    title: "Topic"
+crews:
+  research_crew:
+    agents:
+      researcher:
+        llm_model:
+          provider: 'groq'
+          model_name: 'llama3-8b-8192'
+        role: "Researcher"
+        goal: "Find facts about {topic}."
+        tools: [human]
+        backstory: "An expert."
+    tasks:
+      research_task:
+        agent: researcher
+        description: "Provide facts on {topic}."
+  writer_crew:
+    depends_on: [research_crew]
+    agents:
+      writer:
+        llm_model:
+          provider: 'openai'
+          model_name: 'gpt-4o'
+        role: "Writer"
+        goal: "Write a blog post about {topic}."
+        tools: []
+        backstory: "A creative writer."
+    tasks:
+      write_task:
+        agent: writer
+        description: "Write a post using these facts:\n{research_crew}"
+```
+
+-----
+
+### 6\. Dynamic Task Inputs with `resolved_inputs`
+
+Dynamically construct parts of a task's description based on the results of previous crews. This `summary_crew` changes its `final_summary` placeholder based on whether the `approval_crew` succeeded or was skipped.
+
+```yaml
+crews:
+  approval_crew:
+    run_until:
+      max_retries: 3
+      condition:
+        output_contains: "APPROVE"
+    agents:
+      validator:
+        role: "Validator"
+        goal: "Get approval."
+        tools: [human]
+    tasks:
+      validation_task:
+        agent: validator
+        description: "Review this. To approve, respond with 'APPROVE'."
+        expected_output: "The word 'APPROVE'."
+  summary_crew:
+    depends_on: [approval_crew]
+    agents:
+      reporter:
+        role: "Reporter"
+        goal: "Summarize the outcome."
+        tools: []
+    tasks:
+      report_task:
+        agent: reporter
+        description: "Task Status: {final_summary}"
+        expected_output: "A final status report."
         resolved_inputs:
-          summary_introduction:
+          final_summary:
             case:
-              # Case 1: Check if the deep analysis crew was successful
               - condition:
-                  crew: deep_analysis_crew
-                  status: SUCCESS
-                # If so, use this value for the {summary_introduction} placeholder
-                value: "A full, deep analysis was performed. The findings were: {deep_analysis_crew}"
-              # Case 2: Check if the deep analysis crew was skipped
-              - condition:
-                  crew: deep_analysis_crew
-                  status: SKIPPED
-                value: "A deep analysis was not required based on the triage decision: {triage_crew}"
-            # A fallback default value if no cases match
-            default: "Summarize the results of the workflow."
+                  crew: approval_crew
+                  output_contains: "APPROVE"
+                value: "The process was successfully APPROVED."
+            default: "The process was NOT approved."
+```
+
+-----
+
+### 7\. Other Templating Features
+
+#### Using External Files with `context`
+
+Keep your YAML clean by loading long prompts from external files in a `context/` sub-folder. This example loads `context/instructions.txt` into the `{instructions}` placeholder.
+
+```yaml
+crews:
+  follower_crew:
+    context:
+      instructions: 'instructions.txt'
+    agents:
+      follower:
+        role: "Follower"
+        goal: "Follow instructions."
+        tools: []
+    tasks:
+      follow_task:
+        agent: follower
+        description: "Execute these instructions:\n{instructions}"
+```
+
+#### Deterministic Filenames with `{sha256:...}`
+
+Create consistent filenames based on the hash of an input. The output filename will be the same every time the same `report_id` is used.
+
+```yaml
+user_inputs:
+  report_id:
+    title: "Unique ID for the report"
+crews:
+  report_crew:
+    output_naming_template: 'report_{sha256:report_id}.md'
+    agents:
+      reporter:
+        role: "Reporter"
+        goal: "Generate a report."
+        tools: []
+    tasks:
+      report_task:
+        agent: reporter
+        description: "Generate the report for ID: {report_id}"
 ```
 
 ### Project Folder Structure

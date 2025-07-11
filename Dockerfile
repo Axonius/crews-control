@@ -1,65 +1,42 @@
-# Stage 1: Build and compile everything in a full Python image
+# Stage 1: Build stage for installing dependencies
 FROM python:3.12.3 AS build
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy only the requirements file, to cache the installed packages layer
 COPY requirements.txt /app/
 
-# Install system dependencies for building packages (if any needed)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libssl-dev \
-    libffi-dev \
-    python3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Upgrade pip and install dependencies with retries
 RUN pip install --upgrade pip setuptools \
-    && pip install --require-hashes --no-cache-dir -r requirements.txt --verbose
-# Suggested retry mechanism for pip install (commented out)
-# RUN pip install --upgrade pip setuptools && \
-#     pip install --require-hashes --no-cache-dir -r requirements.txt || \
-#     pip install --require-hashes --no-cache-dir -r requirements.txt
+    && pip install --require-hashes --no-cache-dir -r requirements.txt --verbose \
+    && rm -rf /root/.cache/pip
 
-
-# Invalidate cache from here onwards when needed
-ARG CACHEBUSTER=1
-
-# Create a non-root user 'appuser' and switch to it
-RUN groupadd appuser && \
-    useradd -m -g appuser appuser
-
-USER appuser
-
-# Copy the current directory contents into the container at /app
 COPY . /app
 
-# Stage 2: Create a slim image for running the application
+
+# Stage 2: Final slim image for production
 FROM python:3.12.3-slim
 
-# Copy user and group data
-COPY --from=build /etc/passwd /etc/passwd
-COPY --from=build /etc/group /etc/group
+# Install gosu, a lightweight tool for switching users, then clean up.
+RUN apt-get update && apt-get install -y --no-install-recommends gosu \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy installed Python packages from build stage
+WORKDIR /app
+
+# Copy installed dependencies and application code
 COPY --from=build /usr/local/lib/python3.12 /usr/local/lib/python3.12
-
-# Ensure scripts in /usr/local/bin are available
 COPY --from=build /usr/local/bin /usr/local/bin
-
-# Copy application code and other necessary files from build stage
 COPY --from=build /app /app
 
-# Ensure the appuser owns the necessary directories
-RUN mkdir -p /home/appuser && \
-    chown -R appuser:appuser /home/appuser && \
+# Create a generic appuser with a standard home directory
+RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
 
-# Set the working directory and user
-WORKDIR /app
-USER appuser
+# Copy the entrypoint script and make it executable
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-ENTRYPOINT [ "python", "-u", "crews_control.py" ]
+# Combine the entrypoint script and the main command.
+ENTRYPOINT ["entrypoint.sh", "python", "-u", "crews_control.py"]
+
+# The default command is now empty, as the main command is in the ENTRYPOINT.
 CMD []

@@ -1,0 +1,122 @@
+name: Run Crews-Control Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'The name of the project to run (e.g., pr-security-review).'
+        required: true
+      project_source:
+        description: 'Source of the project files (execution.yaml, context/, etc.).'
+        type: choice
+        options:
+          - repository # Use files from this Git repo (for testing changes)
+          - image      # Use files already inside the Docker image
+        default: 'repository'
+      image_tag:
+        description: 'The Docker image tag to pull from Docker Hub.'
+        required: true
+        default: 'latest'
+      docker_image:
+        description: 'The full name of the Docker image.'
+        required: true
+        default: 'ghcr.io/avri-schneider/crews-control'
+      run_params:
+        description: 'Optional: Command-line parameters for the run (e.g., key1=value1 key2="value 2").'
+        required: false
+
+jobs:
+  run-crews-control-project:
+    runs-on: ubuntu-latest
+    environment: crews-control
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout repository files (if running from repository)
+        if: ${{ inputs.project_source == 'repository' }}
+        uses: actions/checkout@v4
+
+      - name: Create .env file from secrets
+        run: |
+          # This step securely creates the .env file needed by the Docker container
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> .env
+          echo "JIRA_API_TOKEN=${{ secrets.JIRA_API_TOKEN }}" >> .env
+          echo "JIRA_USERNAME=${{ vars.JIRA_USERNAME }}" >> .env
+          echo "JIRA_INSTANCE_URL=${{ vars.JIRA_INSTANCE_URL }}" >> .env
+          echo "JIRA_CREATE_ISSUE_PROJECT_KEY=${{ vars.JIRA_CREATE_ISSUE_PROJECT_KEY }}" >> .env
+          echo "JIRA_CREATE_ISSUE_TYPE=${{ vars.JIRA_CREATE_ISSUE_TYPE }}" >> .env
+          echo "JIRA_LINK_ALLOWED_PAIRS=${{ vars.JIRA_LINK_ALLOWED_PAIRS }}" >> .env
+          echo "JIRA_ATTACH_ALLOWED_PREFIXES=${{ vars.JIRA_ATTACH_ALLOWED_PREFIXES }}" >> .env
+          echo "JIRA_REASSIGN_ALLOWED_PREFIXES=${{ vars.JIRA_REASSIGN_ALLOWED_PREFIXES }}" >> .env
+          echo "JIRA_SETPRIORITY_ALLOWED_PREFIXES=${{ vars.JIRA_SETPRIORITY_ALLOWED_PREFIXES }}" >> .env
+          echo "AZURE_API_KEY=${{ vars.AZURE_API_KEY }}" >> .env
+          echo "AZURE_API_BASE=${{ vars.AZURE_API_BASE }}" >> .env
+          echo "AZURE_API_VERSION=${{ vars.AZURE_API_VERSION }}" >> .env
+          echo "AZURE_OPENAI_VISION_DEPLOYMENT=${{ vars.AZURE_OPENAI_VISION_DEPLOYMENT }}" >> .env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "OPENAI_API_VERSION=${{ vars.OPENAI_API_VERSION }}" >> .env
+          echo "OPENAI_MODEL_NAME=${{ vars.OPENAI_MODEL_NAME }}" >> .env
+          echo "OPENAI_EMBEDDING_MODEL_NAME=${{ vars.OPENAI_EMBEDDING_MODEL_NAME }}" >> .env
+          echo "OPENAI_VISION_MODEL=${{ vars.OPENAI_VISION_MODEL }}" >> .env
+          echo "LLM_NAME=${{ vars.LLM_NAME }}" >> .env
+          echo "EMBEDDER_NAME=${{ vars.EMBEDDER_NAME }}" >> .env
+          echo "CONFLUENCE_ENDPOINT=${{ vars.CONFLUENCE_ENDPOINT }}" >> .env
+          echo "CONFLUENCE_API_USER=${{ vars.CONFLUENCE_API_USER }}" >> .env
+          echo "CONFLUENCE_API_TOKEN=${{ secrets.CONFLUENCE_API_TOKEN }}" >> .env
+          echo "CONFLUENCE_SPACE=${{ vars.CONFLUENCE_SPACE }}" >> .env
+          # Add any other secrets from your .env.example here
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Log in to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull Docker image
+        run: docker pull ${{ inputs.docker_image }}:${{ inputs.image_tag }}
+
+      - name: Run Project from Repository Source
+        if: ${{ inputs.project_source == 'repository' }}
+        run: |
+          docker run --rm \
+            -e HOST_USER_ID=$(id -u) \
+            -e HOST_GROUP_ID=$(id -g) \
+            --env-file .env \
+            -v ${{ github.workspace }}/projects/${{ inputs.project_name }}:/app/projects/${{ inputs.project_name }} \
+            ${{ inputs.docker_image }}:${{ inputs.image_tag }} \
+            --project-name ${{ inputs.project_name }} \
+            --params ${{ inputs.run_params }}
+
+      - name: Run Project from Image Source
+        if: ${{ inputs.project_source == 'image' }}
+        run: |
+          # Create a directory on the host to capture the output artifacts
+          mkdir -p ${{ github.workspace }}/outputs/${{ inputs.project_name }}
+
+          docker run --rm \
+            -e HOST_USER_ID=$(id -u) \
+            -e HOST_GROUP_ID=$(id -g) \
+            --env-file .env \
+            -v ${{ github.workspace }}/outputs/${{ inputs.project_name }}:/app/projects/${{ inputs.project_name }}/output \
+            ${{ inputs.docker_image }}:${{ inputs.image_tag }} \
+            --project-name ${{ inputs.project_name }} \
+            --params ${{ inputs.run_params }}
+
+      - name: Upload Project Artifacts
+        if: always() # Always run this step to capture logs and outputs even if the run fails
+        uses: actions/upload-artifact@v4
+        with:
+          name: output-${{ inputs.project_name }}-${{ github.run_id }}
+          path: |
+            ${{ github.workspace }}/projects/${{ inputs.project_name }}/output/
+            ${{ github.workspace }}/outputs/${{ inputs.project_name }}/
+          if-no-files-found: ignore

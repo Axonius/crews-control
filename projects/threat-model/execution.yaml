@@ -16,12 +16,12 @@ crews:
         tools:
           - name: jira_get_issue_details
             result_as_answer: true
-          custom_field_names_to_fetch:
-            - "Team"          # Example: Add the custom fields you want to fetch
-            - "Target Version"
-          epic_issue_type_names:
-            - "Epic"          # Example: List all names your Jira instance uses for epics
-            - "Initiative"
+            custom_field_names_to_fetch:
+              - "Team"          # Example: Add the custom fields you want to fetch
+              - "Target Version"
+            epic_issue_type_names:
+              - "Epic"          # Example: List all names your Jira instance uses for epics
+              - "Initiative"
         backstory: >
           Specialized in fetching detailed information from Jira tickets using their ID.
           Provides a complete JSON representation of the ticket for downstream processing.
@@ -131,12 +131,12 @@ crews:
           and Confluence pages linked within provided text.
         tools:
           - name: jira_get_issue_details
-          custom_field_names_to_fetch:
-            - "Team"
-            - "Target Version"
-          epic_issue_type_names:
-            - "Epic"          # Example: List all names your Jira instance uses for epics
-            - "Initiative"
+            custom_field_names_to_fetch:
+              - "Team"
+              - "Target Version"
+            epic_issue_type_names:
+              - "Epic"          # Example: List all names your Jira instance uses for epics
+              - "Initiative"
           - confluence
           - image_analyzer_tool
         backstory: >
